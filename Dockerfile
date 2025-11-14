@@ -20,4 +20,10 @@ ENV OPENCV_IO_ENABLE_OPENEXR=0
 
 WORKDIR /app/backend
 
-CMD ["/opt/venv/bin/gunicorn", "--worker-class", "eventlet", "-w", "1", "--bind", "0.0.0.0:8080", "app_senas:app"]
+# Create startup script
+RUN echo '#!/bin/sh' > /start.sh && \
+    echo 'cd /app/backend' >> /start.sh && \
+    echo 'exec /opt/venv/bin/gunicorn --worker-class eventlet -w 1 --bind 0.0.0.0:$PORT app_senas:app' >> /start.sh && \
+    chmod +x /start.sh
+
+CMD ["/bin/sh", "/start.sh"]
