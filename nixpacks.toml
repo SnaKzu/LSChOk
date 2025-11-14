@@ -1,8 +1,0 @@
-[phases.setup]
-aptPkgs = ["ffmpeg", "libsm6", "libxext6"]
-
-[variables]
-OPENCV_IO_ENABLE_OPENEXR = "0"
-
-[start]
-cmd = "cd backend && gunicorn --worker-class eventlet -w 1 --bind 0.0.0.0:$PORT app_senas:app"
