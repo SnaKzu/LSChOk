@@ -17,13 +17,8 @@ COPY . .
 # Set environment variables
 ENV PATH="/opt/venv/bin:$PATH"
 ENV OPENCV_IO_ENABLE_OPENEXR=0
+ENV PYTHONPATH="/app"
 
-WORKDIR /app/backend
+WORKDIR /app
 
-# Create startup script
-RUN echo '#!/bin/sh' > /start.sh && \
-    echo 'cd /app/backend' >> /start.sh && \
-    echo 'exec /opt/venv/bin/gunicorn --worker-class eventlet -w 1 --bind 0.0.0.0:$PORT app_senas:app' >> /start.sh && \
-    chmod +x /start.sh
-
-ENTRYPOINT ["/bin/sh", "/start.sh"]
+ENTRYPOINT ["/opt/venv/bin/gunicorn", "--worker-class", "eventlet", "-w", "1", "--bind", "0.0.0.0:8080", "--chdir", "/app/backend", "app_senas:app"]
