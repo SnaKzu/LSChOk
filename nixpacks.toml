@@ -1,5 +1,8 @@
 [phases.setup]
-aptPkgs = ["libgl1-mesa-dev", "libglib2.0-0", "libgomp1", "libsm6", "libxext6", "libxrender1"]
+aptPkgs = ["ffmpeg", "libsm6", "libxext6"]
+
+[variables]
+OPENCV_IO_ENABLE_OPENEXR = "0"
 
 [start]
-cmd = "cd backend && QT_QPA_PLATFORM=offscreen gunicorn --worker-class eventlet -w 1 --bind 0.0.0.0:$PORT app_senas:app"
+cmd = "cd backend && gunicorn --worker-class eventlet -w 1 --bind 0.0.0.0:$PORT app_senas:app"
