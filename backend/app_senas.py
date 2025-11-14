@@ -288,15 +288,22 @@ def handle_process_frame(data):
         frame_bgr = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
         
         if frame_bgr is None:
+            logger.error(f"⚠️ Error decodificando imagen")
             emit('error', {'message': 'Error decodificando imagen'})
             return
+        
+        logger.debug(f"📸 Frame recibido: {frame_bgr.shape}")
         
         # Extraer landmarks
         landmarks = extract_landmarks(frame_bgr)
         
+        logger.debug(f"👋 Landmarks detectados: {landmarks is not None}")
+        
         if landmarks:
             # Agregar al buffer
             session.add_frame(landmarks)
+            
+            logger.info(f"✅ Manos detectadas - Buffer: {session.get_buffer_size()}/{FRAMES_POR_SECUENCIA}")
             
             # Emitir estado
             emit('frame_processed', {
@@ -327,6 +334,7 @@ def handle_process_frame(data):
                         
                         logger.info(f"🎯 Predicción: {prediction['word']} ({prediction['confidence']:.1f}%)")
         else:
+            logger.warning(f"⚠️ No se detectaron manos en el frame")
             # Sin manos detectadas, limpiar buffer
             session.clear_buffer()
             emit('frame_processed', {
