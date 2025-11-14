@@ -230,6 +230,26 @@ def health():
         'timestamp': datetime.now().isoformat()
     })
 
+@app.route('/api/health')
+def api_health():
+    """Health check API"""
+    return jsonify({
+        'status': 'ok',
+        'ml_enabled': ML_ENABLED,
+        'model_loaded': modelo is not None,
+        'vocabulary_size': len(PALABRAS),
+        'timestamp': datetime.now().isoformat()
+    })
+
+@app.route('/api/vocabulary')
+def api_vocabulary():
+    """Obtener vocabulario disponible"""
+    return jsonify({
+        'vocabulary': PALABRAS,
+        'size': len(PALABRAS),
+        'timestamp': datetime.now().isoformat()
+    })
+
 # ==================== WEBSOCKET EVENTS ====================
 
 @socketio.on('connect')
@@ -288,7 +308,7 @@ def handle_process_frame(data):
         frame_bgr = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
         
         if frame_bgr is None:
-            logger.error(f"⚠️ Error decodificando imagen")
+            logger.error(f"Error decodificando imagen")
             emit('error', {'message': 'Error decodificando imagen'})
             return
         
@@ -381,7 +401,7 @@ def handle_get_stats():
 
 if __name__ == '__main__':
     # Inicializar ML
-    logger.info("🚀 Inicializando sistema de reconocimiento de señas...")
+    logger.info("Inicializando sistema de reconocimiento de señas...")
     init_ml()
     
     if ML_ENABLED:
@@ -393,7 +413,7 @@ if __name__ == '__main__':
     PORT = int(os.environ.get("PORT", 5000))
     HOST = "0.0.0.0"
     
-    logger.info(f"🌐 Servidor iniciando en {HOST}:{PORT}")
+    logger.info(f"Servidor iniciando en {HOST}:{PORT}")
     
     # Iniciar servidor
     socketio.run(app, host=HOST, port=PORT, debug=False, allow_unsafe_werkzeug=True)
