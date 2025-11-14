@@ -1,9 +1,13 @@
 FROM nixos/nix:latest
 
 # Install system dependencies
-RUN nix-env -iA nixpkgs.python312 nixpkgs.gcc nixpkgs.ffmpeg nixpkgs.libGL nixpkgs.glib nixpkgs.stdenv.cc.cc.lib && \
-    echo "/nix/store/"*"-gcc-"*"/lib" >> /etc/ld.so.conf && \
-    ldconfig || true
+RUN nix-env -iA nixpkgs.python312 nixpkgs.gcc nixpkgs.ffmpeg nixpkgs.libGL nixpkgs.glib nixpkgs.stdenv.cc.cc.lib
+
+# Find and set library paths
+RUN STDCPP_LIB=$(find /nix/store -name "libstdc++.so.6" | head -1 | xargs dirname) && \
+    echo "export LD_LIBRARY_PATH=$STDCPP_LIB:\$LD_LIBRARY_PATH" >> /etc/profile && \
+    echo "$STDCPP_LIB" > /etc/ld.so.conf.d/nix.conf && \
+    ldconfig 2>/dev/null || true
 
 WORKDIR /app
 
