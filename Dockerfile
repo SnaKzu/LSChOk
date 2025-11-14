@@ -17,8 +17,7 @@ COPY . .
 # Set environment variables
 ENV PATH="/opt/venv/bin:$PATH"
 ENV OPENCV_IO_ENABLE_OPENEXR=0
-ENV LD_LIBRARY_PATH="/nix/store/*-mesa-*/lib:$LD_LIBRARY_PATH"
 
 WORKDIR /app/backend
 
-CMD ["gunicorn", "--worker-class", "eventlet", "-w", "1", "--bind", "0.0.0.0:8080", "app_senas:app"]
+CMD ["/opt/venv/bin/gunicorn", "--worker-class", "eventlet", "-w", "1", "--bind", "0.0.0.0:8080", "app_senas:app"]
