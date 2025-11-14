@@ -1,7 +1,9 @@
 FROM nixos/nix:latest
 
 # Install system dependencies
-RUN nix-env -iA nixpkgs.python312 nixpkgs.gcc nixpkgs.ffmpeg nixpkgs.libGL nixpkgs.glib nixpkgs.stdenv.cc.cc.lib
+RUN nix-env -iA nixpkgs.python312 nixpkgs.gcc nixpkgs.ffmpeg nixpkgs.libGL nixpkgs.glib nixpkgs.stdenv.cc.cc.lib && \
+    echo "/nix/store/"*"-gcc-"*"/lib" >> /etc/ld.so.conf && \
+    ldconfig || true
 
 WORKDIR /app
 
@@ -18,6 +20,7 @@ COPY . .
 ENV PATH="/opt/venv/bin:$PATH"
 ENV OPENCV_IO_ENABLE_OPENEXR=0
 ENV PYTHONPATH="/app"
+ENV LD_LIBRARY_PATH="/nix/store/*-gcc-*/lib:/nix/store/*-glibc-*/lib:$LD_LIBRARY_PATH"
 
 WORKDIR /app
 
