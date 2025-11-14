@@ -89,11 +89,15 @@ def init_ml():
     """Inicializar modelo y MediaPipe"""
     global modelo, mp_hands, mp_drawing, hands, ML_ENABLED
     
+    logger.info("🔧 Iniciando MediaPipe y modelo LSTM...")
+    
     try:
         # Importar MediaPipe
         import mediapipe as mp
         mp_hands = mp.solutions.hands
         mp_drawing = mp.solutions.drawing_utils
+        
+        logger.info("📦 MediaPipe importado correctamente")
         
         hands = mp_hands.Hands(
             static_image_mode=False,
@@ -101,11 +105,13 @@ def init_ml():
             min_detection_confidence=0.3,
             min_tracking_confidence=0.3
         )
-        logger.info("MediaPipe inicializado con baja confianza para mejor detección")
+        logger.info("✅ MediaPipe Hands inicializado con confianza 0.3")
         
         # Cargar modelo LSTM
         try:
             from tensorflow.keras.models import load_model
+            
+            logger.info("📦 TensorFlow importado correctamente")
             
             # Buscar modelo en diferentes ubicaciones
             possible_paths = [
@@ -136,33 +142,38 @@ def init_ml():
                 ML_ENABLED = False
                 
         except Exception as e:
-            logger.error(f"Error cargando modelo: {e}")
+            logger.error(f"❌ Error cargando modelo: {e}")
             ML_ENABLED = False
             
     except ImportError as e:
-        logger.error(f"Error importando dependencias: {e}")
+        logger.error(f"❌ Error importando dependencias MediaPipe: {e}")
         ML_ENABLED = False
+    except Exception as e:
+        logger.error(f"❌ Error inesperado en init_ml: {e}")
+        ML_ENABLED = False
+    
+    logger.info(f"🏁 Inicialización completa - MediaPipe: {hands is not None}, ML: {ML_ENABLED}")
 
 def extract_landmarks(frame_bgr):
     """Extraer landmarks de un frame BGR"""
     if not hands:
-        logger.error("❌ MediaPipe Hands no inicializado")
+        logger.error("MediaPipe Hands no inicializado")
         return None
     
     try:
         # Convertir BGR a RGB
         frame_rgb = cv2.cvtColor(frame_bgr, cv2.COLOR_BGR2RGB)
         
-        logger.debug(f"🔄 Frame convertido a RGB: {frame_rgb.shape}")
+        logger.debug(f"Frame convertido a RGB: {frame_rgb.shape}")
         
         # Procesar sin timestamp para evitar errores de MediaPipe
         results = hands.process(frame_rgb)
         
         if not results.multi_hand_landmarks:
-            logger.debug("👋 MediaPipe no encontró landmarks")
+            logger.debug("MediaPipe no encontró landmarks")
             return None
         
-        logger.info(f"✋ Detectadas {len(results.multi_hand_landmarks)} mano(s)")
+        logger.info(f"Detectadas {len(results.multi_hand_landmarks)} mano(s)")
         
         # Extraer landmarks (siempre 126 valores)
         frame_data = [0.0] * 126
@@ -178,7 +189,7 @@ def extract_landmarks(frame_bgr):
         return frame_data
         
     except Exception as e:
-        logger.error(f"❌ Error en extract_landmarks: {e}")
+        logger.error(f"Error en extract_landmarks: {e}")
         return None
 
 def predict_from_sequence(sequence_buffer):
@@ -317,25 +328,25 @@ def handle_process_frame(data):
         frame_bgr = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
         
         if frame_bgr is None:
-            logger.error(f"⚠️ Error decodificando imagen")
+            logger.error(f"Error decodificando imagen")
             emit('error', {'message': 'Error decodificando imagen'})
             return
         
-        logger.info(f"📸 Frame recibido: shape={frame_bgr.shape}, dtype={frame_bgr.dtype}, size={len(img_bytes)} bytes")
+        logger.info(f"Frame recibido: shape={frame_bgr.shape}, dtype={frame_bgr.dtype}, size={len(img_bytes)} bytes")
         
         # Extraer landmarks
         landmarks = extract_landmarks(frame_bgr)
         
         if landmarks is not None:
-            logger.info(f"✅ Landmarks detectados: {len(landmarks)} valores")
+            logger.info(f"Landmarks detectados: {len(landmarks)} valores")
         else:
-            logger.warning(f"⚠️ No se detectaron manos - Frame shape: {frame_bgr.shape}")
+            logger.warning(f"No se detectaron manos - Frame shape: {frame_bgr.shape}")
         
         if landmarks:
             # Agregar al buffer
             session.add_frame(landmarks)
             
-            logger.info(f"✅ Manos detectadas - Buffer: {session.get_buffer_size()}/{FRAMES_POR_SECUENCIA}")
+            logger.info(f"Manos detectadas - Buffer: {session.get_buffer_size()}/{FRAMES_POR_SECUENCIA}")
             
             # Emitir estado
             emit('frame_processed', {
@@ -364,9 +375,9 @@ def handle_process_frame(data):
                             'prediction_number': session.prediction_count
                         })
                         
-                        logger.info(f"🎯 Predicción: {prediction['word']} ({prediction['confidence']:.1f}%)")
+                        logger.info(f"Predicción: {prediction['word']} ({prediction['confidence']:.1f}%)")
         else:
-            logger.warning(f"⚠️ No se detectaron manos en el frame")
+            logger.warning(f"No se detectaron manos en el frame")
             # Sin manos detectadas, limpiar buffer
             session.clear_buffer()
             emit('frame_processed', {
@@ -411,16 +422,16 @@ def handle_get_stats():
 
 # ==================== INICIALIZACIÓN ====================
 
+# Inicializar ML al cargar el módulo (para gunicorn)
+logger.info("🚀 Inicializando sistema de reconocimiento de señas...")
+init_ml()
+
+if ML_ENABLED:
+    logger.info("✅ Sistema ML activo")
+else:
+    logger.warning("⚠️ Sistema funcionando sin ML")
+
 if __name__ == '__main__':
-    # Inicializar ML
-    logger.info("Inicializando sistema de reconocimiento de señas...")
-    init_ml()
-    
-    if ML_ENABLED:
-        logger.info("Sistema ML activo")
-    else:
-        logger.info("Sistema funcionando sin ML")
-    
     # Obtener puerto de Railway o usar 5000
     PORT = int(os.environ.get("PORT", 5000))
     HOST = "0.0.0.0"
