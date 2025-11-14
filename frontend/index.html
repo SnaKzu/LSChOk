@@ -1,0 +1,354 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Reconocimiento de Lengua de Señas Chilenas en tiempo real con Inteligencia Artificial">
+    <title>LSCh Recognition - Lengua de Señas Chilenas</title>
+
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Poppins:wght@600;700;800&display=swap" rel="stylesheet">
+    
+    <!-- Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- CSS -->
+    <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+    
+    <!-- Navigation -->
+    <nav class="navbar">
+        <div class="container">
+            <div class="nav-brand">
+                <i class="fas fa-hand-paper"></i>
+                <span>LSCh Recognition</span>
+            </div>
+            <ul class="nav-menu">
+                <li><a href="#inicio" class="nav-link active">Inicio</a></li>
+                <li><a href="#caracteristicas" class="nav-link">Características</a></li>
+                <li><a href="#vocabulario" class="nav-link">Vocabulario</a></li>
+                <li><a href="#tecnologia" class="nav-link">Tecnología</a></li>
+                <li><a href="/demo" class="nav-link"><i class="fas fa-play"></i> Demo</a></li>
+                <li><a href="/login" class="nav-link"><i class="fas fa-sign-in-alt"></i> Iniciar Sesión</a></li>
+                <li><a href="/register" class="btn-demo">Registrarse</a></li>
+            </ul>
+            <div class="hamburger">
+                <span></span>
+                <span></span>
+                <span></span>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Hero Section -->
+    <section id="inicio" class="hero">
+        <div class="hero-bg">
+            <div class="circle circle-1"></div>
+            <div class="circle circle-2"></div>
+            <div class="circle circle-3"></div>
+        </div>
+        
+        <div class="container hero-content">
+            <div class="hero-text">
+                <h1 class="hero-title">
+                    Reconocimiento de
+                    <span class="gradient-text">Lengua de Señas Chilenas</span>
+                    en Tiempo Real
+                </h1>
+                <p class="hero-description">
+                    Tecnología de Inteligencia Artificial que traduce la Lengua de Señas Chilenas
+                    a texto en tiempo real usando MediaPipe y redes neuronales LSTM.
+                </p>
+                <div class="hero-buttons">
+                    <a href="/demo" class="btn btn-primary">
+                        <i class="fas fa-play"></i>
+                        Probar Ahora
+                    </a>
+                    <a href="#caracteristicas" class="btn btn-secondary">
+                        <i class="fas fa-info-circle"></i>
+                        Más Información
+                    </a>
+                </div>
+                <div class="hero-stats">
+                    <div class="stat">
+                        <span class="stat-number" data-target="14">0</span>
+                        <span class="stat-label">Palabras Reconocidas</span>
+                    </div>
+                    <div class="stat">
+                        <span class="stat-number" data-target="80">0</span>%
+                        <span class="stat-label">Precisión del Modelo</span>
+                    </div>
+                    <div class="stat">
+                        <span class="stat-number" data-target="30">0</span>fps
+                        <span class="stat-label">Velocidad de Procesamiento</span>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="hero-visual">
+                <div class="visual-card">
+                    <div class="visual-header">
+                        <div class="dots">
+                            <span></span>
+                            <span></span>
+                            <span></span>
+                        </div>
+                        <span class="visual-title">Demo en Vivo</span>
+                    </div>
+                    <div class="visual-body">
+                        <div class="hand-animation">
+                            <i class="fas fa-hand-paper"></i>
+                        </div>
+                        <div class="recognition-badge">
+                            <i class="fas fa-check-circle"></i>
+                            <span>Reconociendo...</span>
+                        </div>
+                        <div class="prediction-text">"HOLA"</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="scroll-indicator">
+            <div class="mouse">
+                <div class="wheel"></div>
+            </div>
+            <span>Desliza para explorar</span>
+        </div>
+    </section>
+
+    <!-- Features Section -->
+    <section id="caracteristicas" class="features">
+        <div class="container">
+            <div class="section-header">
+                <h2 class="section-title">Características Principales</h2>
+                <p class="section-subtitle">
+                    Tecnología de vanguardia para reconocimiento de lenguaje de señas
+                </p>
+            </div>
+            
+            <div class="features-grid">
+                <div class="feature-card">
+                    <div class="feature-icon">
+                        <i class="fas fa-bolt"></i>
+                    </div>
+                    <h3 class="feature-title">Tiempo Real</h3>
+                    <p class="feature-description">
+                        Reconocimiento instantáneo de señas con procesamiento a 30 FPS
+                        para una experiencia fluida y natural.
+                    </p>
+                </div>
+                
+                <div class="feature-card">
+                    <div class="feature-icon">
+                        <i class="fas fa-brain"></i>
+                    </div>
+                    <h3 class="feature-title">IA Avanzada</h3>
+                    <p class="feature-description">
+                        Red neuronal LSTM entrenada con MediaPipe para detección
+                        precisa de pose, rostro y manos.
+                    </p>
+                </div>
+                
+                <div class="feature-card">
+                    <div class="feature-icon">
+                        <i class="fas fa-language"></i>
+                    </div>
+                    <h3 class="feature-title">14 Palabras LSCh</h3>
+                    <p class="feature-description">
+                        Vocabulario completo de saludos, expresiones comunes y 
+                        frases de cortesía en Lengua de Señas Chilenas.
+                    </p>
+                </div>
+                
+                <div class="feature-card">
+                    <div class="feature-icon">
+                        <i class="fas fa-chart-line"></i>
+                    </div>
+                    <h3 class="feature-title">Alta Precisión</h3>
+                    <p class="feature-description">
+                        Confianza del 80% en reconocimiento gracias a normalización
+                        de keypoints y arquitectura LSTM optimizada.
+                    </p>
+                </div>
+                
+                <div class="feature-card">
+                    <div class="feature-icon">
+                        <i class="fas fa-desktop"></i>
+                    </div>
+                    <h3 class="feature-title">Interfaz Intuitiva</h3>
+                    <p class="feature-description">
+                        Diseño moderno y responsive que funciona en cualquier 
+                        dispositivo con cámara web.
+                    </p>
+                </div>
+                
+                <div class="feature-card">
+                    <div class="feature-icon">
+                        <i class="fas fa-code"></i>
+                    </div>
+                    <h3 class="feature-title">Open Source</h3>
+                    <p class="feature-description">
+                        Código abierto y documentado para investigadores y 
+                        desarrolladores interesados en LSCh.
+                    </p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Vocabulary Section -->
+    <section id="vocabulario" class="vocabulary">
+        <div class="container">
+            <div class="section-header">
+                <h2 class="section-title">Vocabulario LSCh</h2>
+                <p class="section-subtitle">
+                    Palabras y frases que el sistema puede reconocer
+                </p>
+            </div>
+            
+            <div class="vocabulary-grid" id="vocabulary-list">
+                <!-- Se llena dinámicamente con JavaScript -->
+                <div class="vocabulary-card skeleton">
+                    <div class="vocabulary-icon skeleton-icon"></div>
+                    <div class="vocabulary-word skeleton-text"></div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Technology Section -->
+    <section id="tecnologia" class="technology">
+        <div class="container">
+            <div class="section-header">
+                <h2 class="section-title">Tecnologías Utilizadas</h2>
+                <p class="section-subtitle">
+                    Stack tecnológico de última generación
+                </p>
+            </div>
+            
+            <div class="tech-grid">
+                <div class="tech-card">
+                    <div class="tech-logo">
+                        <i class="fab fa-python"></i>
+                    </div>
+                    <h3>Python 3.10</h3>
+                    <p>Lenguaje base del proyecto</p>
+                </div>
+                
+                <div class="tech-card">
+                    <div class="tech-logo">
+                        <i class="fas fa-project-diagram"></i>
+                    </div>
+                    <h3>TensorFlow 2.15</h3>
+                    <p>Framework de Deep Learning</p>
+                </div>
+                
+                <div class="tech-card">
+                    <div class="tech-logo">
+                        <i class="fas fa-eye"></i>
+                    </div>
+                    <h3>MediaPipe</h3>
+                    <p>Detección de pose y manos</p>
+                </div>
+                
+                <div class="tech-card">
+                    <div class="tech-logo">
+                        <i class="fas fa-network-wired"></i>
+                    </div>
+                    <h3>LSTM Network</h3>
+                    <p>Red neuronal recurrente</p>
+                </div>
+                
+                <div class="tech-card">
+                    <div class="tech-logo">
+                        <i class="fas fa-server"></i>
+                    </div>
+                    <h3>Flask + SocketIO</h3>
+                    <p>Backend en tiempo real</p>
+                </div>
+                
+                <div class="tech-card">
+                    <div class="tech-logo">
+                        <i class="fab fa-html5"></i>
+                    </div>
+                    <h3>HTML5 + CSS3</h3>
+                    <p>Frontend moderno</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- CTA Section -->
+    <section class="cta">
+        <div class="container">
+            <div class="cta-content">
+                <h2 class="cta-title">¿Listo para probar?</h2>
+                <p class="cta-description">
+                    Experimenta el reconocimiento de Lengua de Señas Chilenas en tu navegador
+                </p>
+                <a href="/demo" class="btn btn-cta">
+                    <i class="fas fa-video"></i>
+                    Activar Demo Interactivo
+                </a>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="container">
+            <div class="footer-content">
+                <div class="footer-section">
+                    <h4>LSCh Recognition</h4>
+                    <p>Proyecto de reconocimiento de Lengua de Señas Chilenas usando IA</p>
+                    <div class="social-links">
+                        <a href="#" aria-label="GitHub"><i class="fab fa-github"></i></a>
+                        <a href="#" aria-label="LinkedIn"><i class="fab fa-linkedin"></i></a>
+                        <a href="#" aria-label="Twitter"><i class="fab fa-twitter"></i></a>
+                    </div>
+                </div>
+                
+                <div class="footer-section">
+                    <h4>Enlaces</h4>
+                    <ul>
+                        <li><a href="#inicio">Inicio</a></li>
+                        <li><a href="#caracteristicas">Características</a></li>
+                        <li><a href="/demo">Demo</a></li>
+                        <li><a href="#tecnologia">Tecnología</a></li>
+                    </ul>
+                </div>
+                
+                <div class="footer-section">
+                    <h4>Recursos</h4>
+                    <ul>
+                        <li><a href="#">Documentación</a></li>
+                        <li><a href="#">API</a></li>
+                        <li><a href="#">GitHub</a></li>
+                        <li><a href="#">Tests</a></li>
+                    </ul>
+                </div>
+                
+                <div class="footer-section">
+                    <h4>Contacto</h4>
+                    <p>¿Preguntas o sugerencias?</p>
+                    <a href="mailto:contact@lsch-project.com" class="footer-email">
+                        contact@lsch-project.com
+                    </a>
+                </div>
+            </div>
+            
+            <div class="footer-bottom">
+                <p>&copy; 2025 LSCh Recognition Project. Todos los derechos reservados.</p>
+                <p>Hecho con <i class="fas fa-heart"></i> para la comunidad sorda Chilena</p>
+            </div>
+        </div>
+    </footer>
+
+    <!-- JavaScript -->
+    <script src="js/app.js"></script>
+</body>
+</html>

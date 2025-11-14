@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard - LSP Recognition</title>
+    <link rel="icon" href="favicon.ico" type="image/x-icon">
+    
+    <!-- Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Poppins:wght@600;700;800&display=swap" rel="stylesheet">
+    
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- Styles -->
+    <link rel="stylesheet" href="{{ url_for('serve_css', filename='styles.css') }}">
+    <link rel="stylesheet" href="{{ url_for('serve_css', filename='dashboard.css') }}">
+</head>
+<body>
+    <!-- Navbar -->
+    <nav class="navbar">
+        <div class="container">
+            <a href="{{ url_for('index') }}" class="nav-brand">
+                <i class="fas fa-hand-paper"></i>
+                <span>LSP Recognition</span>
+            </a>
+            <ul class="nav-menu">
+                <li><a href="{{ url_for('dashboard') }}" class="nav-link active">Dashboard</a></li>
+                <li><a href="{{ url_for('demo') }}" class="nav-link">Demo</a></li>
+                <li><a href="{{ url_for('index') }}#vocabulario" class="nav-link">Vocabulario</a></li>
+                <li class="user-menu">
+                    <button class="user-button" onclick="toggleUserMenu()">
+                        <i class="fas fa-user-circle"></i>
+                        <span>{{ user.username }}</span>
+                        <i class="fas fa-chevron-down"></i>
+                    </button>
+                    <div class="user-dropdown" id="userDropdown">
+                        <a href="{{ url_for('dashboard') }}"><i class="fas fa-th-large"></i> Dashboard</a>
+                        <a href="#"><i class="fas fa-user"></i> Perfil</a>
+                        <a href="#"><i class="fas fa-cog"></i> Configuración</a>
+                        <div class="dropdown-divider"></div>
+                        <a href="{{ url_for('logout') }}"><i class="fas fa-sign-out-alt"></i> Cerrar Sesión</a>
+                    </div>
+                </li>
+            </ul>
+        </div>
+    </nav>
+
+    <!-- Dashboard Container -->
+    <div class="dashboard-container">
+        <div class="container">
+            <!-- Welcome Section -->
+            <div class="welcome-section">
+                <div class="welcome-content">
+                    <h1>¡Bienvenido, {{ user.full_name or user.username }}!</h1>
+                    <p>Aquí puedes ver tus estadísticas y el historial de tus predicciones</p>
+                </div>
+                <div class="welcome-actions">
+                    <a href="{{ url_for('demo') }}" class="btn-primary">
+                        <i class="fas fa-video"></i> Ir al Demo
+                    </a>
+                </div>
+            </div>
+
+            <!-- Stats Cards -->
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-icon predictions">
+                        <i class="fas fa-chart-line"></i>
+                    </div>
+                    <div class="stat-content">
+                        <h3>{{ total_predictions }}</h3>
+                        <p>Predicciones Totales</p>
+                    </div>
+                </div>
+
+                <div class="stat-card">
+                    <div class="stat-icon accuracy">
+                        <i class="fas fa-bullseye"></i>
+                    </div>
+                    <div class="stat-content">
+                        <h3>{{ "%.1f"|format(avg_confidence * 100) }}%</h3>
+                        <p>Confianza Promedio</p>
+                    </div>
+                </div>
+
+                <div class="stat-card">
+                    <div class="stat-icon words">
+                        <i class="fas fa-hands"></i>
+                    </div>
+                    <div class="stat-content">
+                        <h3>{{ top_words|length }}</h3>
+                        <p>Señas Diferentes</p>
+                    </div>
+                </div>
+
+                <div class="stat-card">
+                    <div class="stat-icon time">
+                        <i class="fas fa-clock"></i>
+                    </div>
+                    <div class="stat-content">
+                        <h3>{{ user.created_at.strftime('%d/%m/%Y') }}</h3>
+                        <p>Miembro Desde</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Main Content Grid -->
+            <div class="dashboard-grid">
+                <!-- Top Words Chart -->
+                <div class="dashboard-card">
+                    <div class="card-header">
+                        <h2><i class="fas fa-trophy"></i> Señas Más Usadas</h2>
+                    </div>
+                    <div class="card-body">
+                        {% if top_words %}
+                            <div class="top-words-list">
+                                {% for word, count in top_words %}
+                                <div class="top-word-item">
+                                    <div class="word-rank">{{ loop.index }}</div>
+                                    <div class="word-info">
+                                        <span class="word-name">{{ word }}</span>
+                                        <div class="word-bar">
+                                            <div class="word-fill" data-width="{{ ((count / top_words[0][1]) * 100) | round(0) }}"></div>
+                                        </div>
+                                    </div>
+                                    <div class="word-count">{{ count }}</div>
+                                </div>
+                                {% endfor %}
+                            </div>
+                        {% else %}
+                            <div class="empty-state">
+                                <i class="fas fa-hand-paper"></i>
+                                <p>Aún no has realizado predicciones</p>
+                                <a href="{{ url_for('demo') }}" class="btn-secondary">Comenzar Ahora</a>
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <!-- Recent Activity -->
+                <div class="dashboard-card">
+                    <div class="card-header">
+                        <h2><i class="fas fa-history"></i> Actividad Reciente</h2>
+                    </div>
+                    <div class="card-body">
+                        {% if recent_predictions %}
+                            <div class="activity-list">
+                                {% for pred in recent_predictions %}
+                                <div class="activity-item">
+                                    <div class="activity-icon">
+                                        <i class="fas fa-hand-paper"></i>
+                                    </div>
+                                    <div class="activity-content">
+                                        <div class="activity-title">{{ pred.word }}</div>
+                                        <div class="activity-time">
+                                            <i class="fas fa-clock"></i>
+                                            {{ pred.timestamp.strftime('%d/%m/%Y %H:%M') }}
+                                        </div>
+                                    </div>
+                                    <div class="activity-confidence">
+                                        <div class="confidence-badge" 
+                                             data-confidence="{{ pred.confidence }}">
+                                            {{ "%.0f"|format(pred.confidence * 100) }}%
+                                        </div>
+                                    </div>
+                                </div>
+                                {% endfor %}
+                            </div>
+                        {% else %}
+                            <div class="empty-state">
+                                <i class="fas fa-history"></i>
+                                <p>No hay actividad reciente</p>
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- User Info Section -->
+            <div class="user-info-section">
+                <div class="dashboard-card">
+                    <div class="card-header">
+                        <h2><i class="fas fa-user"></i> Información de Cuenta</h2>
+                    </div>
+                    <div class="card-body">
+                        <div class="info-grid">
+                            <div class="info-item">
+                                <span class="info-label">Usuario:</span>
+                                <span class="info-value">{{ user.username }}</span>
+                            </div>
+                            <div class="info-item">
+                                <span class="info-label">Email:</span>
+                                <span class="info-value">{{ user.email }}</span>
+                            </div>
+                            <div class="info-item">
+                                <span class="info-label">Nombre Completo:</span>
+                                <span class="info-value">{{ user.full_name or 'No especificado' }}</span>
+                            </div>
+                            <div class="info-item">
+                                <span class="info-label">Última Sesión:</span>
+                                <span class="info-value">
+                                    {% if user.last_login %}
+                                        {{ user.last_login.strftime('%d/%m/%Y %H:%M') }}
+                                    {% else %}
+                                        Primera vez
+                                    {% endif %}
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="container">
+            <p>&copy; 2025 LSP Recognition. Todos los derechos reservados.</p>
+        </div>
+    </footer>
+
+    <script>
+        function toggleUserMenu() {
+            const dropdown = document.getElementById('userDropdown');
+            dropdown.classList.toggle('show');
+        }
+
+        // Close dropdown when clicking outside
+        window.addEventListener('click', function(e) {
+            if (!e.target.matches('.user-button') && !e.target.matches('.user-button *')) {
+                const dropdown = document.getElementById('userDropdown');
+                if (dropdown.classList.contains('show')) {
+                    dropdown.classList.remove('show');
+                }
+            }
+        });
+
+        // Color confidence badges
+        document.querySelectorAll('.confidence-badge').forEach(badge => {
+            const confidence = parseFloat(badge.dataset.confidence);
+            if (confidence >= 0.9) {
+                badge.classList.add('high');
+            } else if (confidence >= 0.7) {
+                badge.classList.add('medium');
+            } else {
+                badge.classList.add('low');
+            }
+        });
+
+        // Set widths for top words from data-width attributes (avoids inline Jinja in style)
+        document.querySelectorAll('.word-fill').forEach(el => {
+            const w = el.dataset.width;
+            if (w !== undefined && w !== '') {
+                el.style.width = w + '%';
+            }
+        });
+
+        // Animate stats on load
+        window.addEventListener('load', () => {
+            document.querySelectorAll('.stat-card').forEach((card, index) => {
+                setTimeout(() => {
+                    card.style.opacity = '1';
+                    card.style.transform = 'translateY(0)';
+                }, index * 100);
+            });
+        });
+    </script>
+</body>
+</html>

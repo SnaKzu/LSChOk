@@ -1,0 +1,314 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard - LSCh Recognition</title>
+    <link rel="icon" href="favicon.ico" type="image/x-icon">
+    
+    <!-- Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Poppins:wght@600;700;800&display=swap" rel="stylesheet">
+    
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- Styles -->
+    <link rel="stylesheet" href="/css/styles.css">
+    <link rel="stylesheet" href="/css/dashboard.css">
+</head>
+<body>
+    <!-- Navbar -->
+    <nav class="navbar">
+        <div class="container">
+            <a href="/" class="nav-brand">
+                <i class="fas fa-hand-paper"></i>
+                <span>LSCh Recognition</span>
+            </a>
+            <ul class="nav-menu">
+                <li><a href="/dashboard" class="nav-link active">Dashboard</a></li>
+                <li><a href="/demo" class="nav-link">Demo</a></li>
+                <li><a href="/#vocabulario" class="nav-link">Vocabulario</a></li>
+                <li class="user-menu">
+                    <button class="user-button" onclick="toggleUserMenu()">
+                        <i class="fas fa-user-circle"></i>
+                        <span id="username">Usuario Demo</span>
+                        <i class="fas fa-chevron-down"></i>
+                    </button>
+                    <div class="user-dropdown" id="userDropdown">
+                        <a href="/dashboard"><i class="fas fa-th-large"></i> Dashboard</a>
+                        <a href="#"><i class="fas fa-user"></i> Perfil</a>
+                        <a href="#"><i class="fas fa-cog"></i> Configuración</a>
+                        <div class="dropdown-divider"></div>
+                        <a href="/logout"><i class="fas fa-sign-out-alt"></i> Cerrar Sesión</a>
+                    </div>
+                </li>
+            </ul>
+        </div>
+    </nav>
+
+    <!-- Dashboard Container -->
+    <div class="dashboard-container">
+        <div class="container">
+            <!-- Welcome Section -->
+            <div class="welcome-section">
+                <div class="welcome-content">
+                    <h1 id="welcomeMessage">¡Bienvenido, Usuario Demo!</h1>
+                    <p>Aquí puedes ver tus estadísticas y el historial de tus predicciones</p>
+                </div>
+                <div class="welcome-actions">
+                    <a href="/demo" class="btn-primary">
+                        <i class="fas fa-video"></i> Ir al Demo
+                    </a>
+                </div>
+            </div>
+
+            <!-- Stats Cards -->
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-icon predictions">
+                        <i class="fas fa-chart-line"></i>
+                    </div>
+                    <div class="stat-content">
+                        <h3 id="totalPredictions">42</h3>
+                        <p>Predicciones Totales</p>
+                    </div>
+                </div>
+
+                <div class="stat-card">
+                    <div class="stat-icon accuracy">
+                        <i class="fas fa-bullseye"></i>
+                    </div>
+                    <div class="stat-content">
+                        <h3 id="avgConfidence">87.5%</h3>
+                        <p>Confianza Promedio</p>
+                    </div>
+                </div>
+
+                <div class="stat-card">
+                    <div class="stat-icon words">
+                        <i class="fas fa-hands"></i>
+                    </div>
+                    <div class="stat-content">
+                        <h3 id="uniqueWords">8</h3>
+                        <p>Señas Diferentes</p>
+                    </div>
+                </div>
+
+                <div class="stat-card">
+                    <div class="stat-icon time">
+                        <i class="fas fa-clock"></i>
+                    </div>
+                    <div class="stat-content">
+                        <h3 id="memberSince">20/10/2025</h3>
+                        <p>Miembro Desde</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Main Content Grid -->
+            <div class="dashboard-grid">
+                <!-- Top Words Chart -->
+                <div class="dashboard-card">
+                    <div class="card-header">
+                        <h2><i class="fas fa-trophy"></i> Señas Más Usadas</h2>
+                    </div>
+                    <div class="card-body">
+                        <div class="top-words-list" id="topWordsList">
+                            <div class="top-word-item">
+                                <div class="word-rank">1</div>
+                                <div class="word-info">
+                                    <span class="word-name">Hola</span>
+                                    <div class="word-bar">
+                                        <div class="word-fill" data-width="100"></div>
+                                    </div>
+                                </div>
+                                <div class="word-count">15</div>
+                            </div>
+                            <div class="top-word-item">
+                                <div class="word-rank">2</div>
+                                <div class="word-info">
+                                    <span class="word-name">Gracias</span>
+                                    <div class="word-bar">
+                                        <div class="word-fill" data-width="80"></div>
+                                    </div>
+                                </div>
+                                <div class="word-count">12</div>
+                            </div>
+                            <div class="top-word-item">
+                                <div class="word-rank">3</div>
+                                <div class="word-info">
+                                    <span class="word-name">Buenos Días</span>
+                                    <div class="word-bar">
+                                        <div class="word-fill" data-width="53"></div>
+                                    </div>
+                                </div>
+                                <div class="word-count">8</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Recent Activity -->
+                <div class="dashboard-card">
+                    <div class="card-header">
+                        <h2><i class="fas fa-history"></i> Actividad Reciente</h2>
+                    </div>
+                    <div class="card-body">
+                        <div class="activity-list" id="activityList">
+                            <div class="activity-item">
+                                <div class="activity-icon">
+                                    <i class="fas fa-hand-paper"></i>
+                                </div>
+                                <div class="activity-content">
+                                    <div class="activity-title">Hola</div>
+                                    <div class="activity-time">
+                                        <i class="fas fa-clock"></i>
+                                        23/10/2025 14:30
+                                    </div>
+                                </div>
+                                <div class="activity-confidence">
+                                    <div class="confidence-badge" data-confidence="0.92">
+                                        92%
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="activity-item">
+                                <div class="activity-icon">
+                                    <i class="fas fa-hand-paper"></i>
+                                </div>
+                                <div class="activity-content">
+                                    <div class="activity-title">Gracias</div>
+                                    <div class="activity-time">
+                                        <i class="fas fa-clock"></i>
+                                        23/10/2025 14:28
+                                    </div>
+                                </div>
+                                <div class="activity-confidence">
+                                    <div class="confidence-badge" data-confidence="0.87">
+                                        87%
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="activity-item">
+                                <div class="activity-icon">
+                                    <i class="fas fa-hand-paper"></i>
+                                </div>
+                                <div class="activity-content">
+                                    <div class="activity-title">Buenos Días</div>
+                                    <div class="activity-time">
+                                        <i class="fas fa-clock"></i>
+                                        23/10/2025 14:25
+                                    </div>
+                                </div>
+                                <div class="activity-confidence">
+                                    <div class="confidence-badge" data-confidence="0.81">
+                                        81%
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- User Info Section -->
+            <div class="user-info-section">
+                <div class="dashboard-card">
+                    <div class="card-header">
+                        <h2><i class="fas fa-user"></i> Información de Cuenta</h2>
+                    </div>
+                    <div class="card-body">
+                        <div class="info-grid">
+                            <div class="info-item">
+                                <span class="info-label">Usuario:</span>
+                                <span class="info-value" id="userInfo">demo_user</span>
+                            </div>
+                            <div class="info-item">
+                                <span class="info-label">Email:</span>
+                                <span class="info-value" id="emailInfo">demo@lsch.com</span>
+                            </div>
+                            <div class="info-item">
+                                <span class="info-label">Nombre Completo:</span>
+                                <span class="info-value" id="fullNameInfo">Usuario Demo</span>
+                            </div>
+                            <div class="info-item">
+                                <span class="info-label">Última Sesión:</span>
+                                <span class="info-value" id="lastLoginInfo">
+                                    23/10/2025 14:15
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="container">
+            <p>&copy; 2025 LSCh Recognition. Todos los derechos reservados.</p>
+        </div>
+    </footer>
+
+    <!-- Dashboard Data Script -->
+    <script src="/js/dashboard-data.js"></script>
+    
+    <script>
+        function toggleUserMenu() {
+            const dropdown = document.getElementById('userDropdown');
+            dropdown.classList.toggle('show');
+        }
+
+        // Close dropdown when clicking outside
+        window.addEventListener('click', function(e) {
+            if (!e.target.matches('.user-button') && !e.target.matches('.user-button *')) {
+                const dropdown = document.getElementById('userDropdown');
+                if (dropdown.classList.contains('show')) {
+                    dropdown.classList.remove('show');
+                }
+            }
+        });
+
+        // Color confidence badges (executed after dynamic loading)
+        function colorConfidenceBadges() {
+            document.querySelectorAll('.confidence-badge').forEach(badge => {
+                const confidence = parseFloat(badge.dataset.confidence);
+                if (confidence >= 0.9) {
+                    badge.classList.add('high');
+                } else if (confidence >= 0.7) {
+                    badge.classList.add('medium');
+                } else {
+                    badge.classList.add('low');
+                }
+            });
+        }
+
+        // Set widths for top words from data-width attributes
+        function animateWordBars() {
+            document.querySelectorAll('.word-fill').forEach(el => {
+                const w = el.dataset.width;
+                if (w !== undefined && w !== '') {
+                    el.style.width = w + '%';
+                }
+            });
+        }
+
+        // Animate stats on load
+        window.addEventListener('load', () => {
+            document.querySelectorAll('.stat-card').forEach((card, index) => {
+                setTimeout(() => {
+                    card.style.opacity = '1';
+                    card.style.transform = 'translateY(0)';
+                }, index * 100);
+            });
+            
+            // Execute coloring and animation after initial load
+            setTimeout(() => {
+                colorConfidenceBadges();
+                animateWordBars();
+            }, 1500);
+        });
+    </script>
+</body>
+</html>

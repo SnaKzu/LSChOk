@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Demo Interactivo - LSCh Recognition</title>
+    
+    <!-- Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Poppins:wght@600;700;800&display=swap" rel="stylesheet">
+    
+    <!-- Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- CSS -->
+    <link rel="stylesheet" href="css/styles.css">
+    <link rel="stylesheet" href="css/demo.css">
+    
+    <!-- Socket.IO -->
+    <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
+</head>
+<body class="demo-page">
+    
+    <!-- Navigation -->
+    <nav class="navbar">
+        <div class="container">
+            <div class="nav-brand">
+                <i class="fas fa-hand-paper"></i>
+                <span>LSCh Recognition</span>
+            </div>
+            <ul class="nav-menu">
+                <li><a href="index.html" class="nav-link">← Volver al Inicio</a></li>
+            </ul>
+        </div>
+    </nav>
+
+    <!-- Demo Section -->
+    <section class="demo-section">
+        <div class="container">
+            <div class="demo-header">
+                <h1 class="demo-title">Demo Interactivo</h1>
+                <p class="demo-subtitle">
+                    Activa tu cámara y realiza señas en Lengua de Señas Chilenas
+                </p>
+            </div>
+            
+            <div class="demo-content">
+                <!-- Video Panel -->
+                <div class="video-panel">
+                    <div class="video-container">
+                        <video id="videoElement" autoplay playsinline></video>
+                        <canvas id="canvasElement"></canvas>
+                        
+                        <!-- Status Overlay -->
+                        <div class="video-overlay" id="videoOverlay">
+                            <div class="status-badge" id="statusBadge">
+                                <i class="fas fa-hand-paper"></i>
+                                <span>Esperando manos...</span>
+                            </div>
+                            
+                            <div class="recording-indicator" id="recordingIndicator">
+                                <div class="pulse-dot"></div>
+                                <span>Grabando secuencia</span>
+                            </div>
+                            
+                            <div class="frame-counter" id="frameCounter">
+                                Frame: <span id="frameCount">0</span>
+                            </div>
+                        </div>
+                        
+                        <!-- Start Button -->
+                        <div class="start-overlay" id="startOverlay">
+                            <button class="btn-start" id="startBtn">
+                                <i class="fas fa-video"></i>
+                                Activar Cámara
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <!-- Controls -->
+                    <div class="video-controls">
+                        <button class="control-btn" id="pauseBtn" disabled>
+                            <i class="fas fa-pause"></i>
+                            Pausar
+                        </button>
+                        <button class="control-btn" id="clearBtn">
+                            <i class="fas fa-eraser"></i>
+                            Limpiar Historial
+                        </button>
+                        <button class="control-btn" id="stopBtn" disabled>
+                            <i class="fas fa-stop"></i>
+                            Detener
+                        </button>
+                    </div>
+                </div>
+                
+                <!-- Results Panel -->
+                <div class="results-panel">
+                    <!-- Prediction Card -->
+                    <div class="prediction-card">
+                        <h3 class="card-title">
+                            <i class="fas fa-brain"></i>
+                            Predicción Actual
+                        </h3>
+                        
+                        <div class="current-prediction" id="currentPrediction">
+                            <div class="prediction-word">---</div>
+                            <div class="prediction-confidence">
+                                <span class="confidence-label">Confianza:</span>
+                                <div class="confidence-bar">
+                                    <div class="confidence-fill" id="confidenceFill" style="width: 0%"></div>
+                                </div>
+                                <span class="confidence-value" id="confidenceValue">0%</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Sentence History -->
+                    <div class="sentence-card">
+                        <h3 class="card-title">
+                            <i class="fas fa-list"></i>
+                            Historial de Señas
+                        </h3>
+                        
+                        <div class="sentence-container" id="sentenceContainer">
+                            <p class="empty-message">
+                                <i class="fas fa-info-circle"></i>
+                                Realiza señas para empezar
+                            </p>
+                        </div>
+                    </div>
+                    
+                    <!-- Statistics -->
+                    <div class="stats-card">
+                        <h3 class="card-title">
+                            <i class="fas fa-chart-line"></i>
+                            Estadísticas
+                        </h3>
+                        
+                        <div class="stats-grid">
+                            <div class="stat-item">
+                                <span class="stat-icon"><i class="fas fa-check-circle"></i></span>
+                                <span class="stat-value" id="totalPredictions">0</span>
+                                <span class="stat-label">Predicciones</span>
+                            </div>
+                            
+                            <div class="stat-item">
+                                <span class="stat-icon"><i class="fas fa-clock"></i></span>
+                                <span class="stat-value" id="sessionTime">00:00</span>
+                                <span class="stat-label">Tiempo</span>
+                            </div>
+                            
+                            <div class="stat-item">
+                                <span class="stat-icon"><i class="fas fa-tachometer-alt"></i></span>
+                                <span class="stat-value" id="avgConfidence">0%</span>
+                                <span class="stat-label">Confianza Media</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Connection Status -->
+                    <div class="connection-status" id="connectionStatus">
+                        <i class="fas fa-circle" id="statusIcon"></i>
+                        <span id="statusText">Conectando al servidor...</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Instructions Modal -->
+    <div class="modal" id="instructionsModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>
+                    <i class="fas fa-book"></i>
+                    Instrucciones de Uso
+                </h2>
+                <button class="modal-close" id="closeModal">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            
+            <div class="modal-body">
+                <div class="instruction-step">
+                    <div class="step-number">1</div>
+                    <div class="step-content">
+                        <h4>Activa la Cámara</h4>
+                        <p>Haz clic en "Activar Cámara" y permite el acceso a tu webcam</p>
+                    </div>
+                </div>
+                
+                <div class="instruction-step">
+                    <div class="step-number">2</div>
+                    <div class="step-content">
+                        <h4>Posiciónate Correctamente</h4>
+                        <p>Asegúrate de que tu cuerpo y manos sean visibles en el cuadro</p>
+                    </div>
+                </div>
+                
+                <div class="instruction-step">
+                    <div class="step-number">3</div>
+                    <div class="step-content">
+                        <h4>Realiza las Señas</h4>
+                        <p>Ejecuta las señas del vocabulario LSCh de forma clara y completa</p>
+                    </div>
+                </div>
+                
+                <div class="instruction-step">
+                    <div class="step-number">4</div>
+                    <div class="step-content">
+                        <h4>Espera el Resultado</h4>
+                        <p>La predicción aparecerá automáticamente cuando termines la seña</p>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="modal-footer">
+                <button class="btn btn-primary" id="gotItBtn">
+                    <i class="fas fa-check"></i>
+                    Entendido
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="js/websocket.js?v=2.0"></script>
+    <script src="js/demo.js?v=2.0"></script>
+</body>
+</html>
