@@ -98,10 +98,10 @@ def init_ml():
         hands = mp_hands.Hands(
             static_image_mode=False,
             max_num_hands=2,
-            min_detection_confidence=0.7,
-            min_tracking_confidence=0.7
+            min_detection_confidence=0.3,
+            min_tracking_confidence=0.3
         )
-        logger.info("MediaPipe inicializado")
+        logger.info("MediaPipe inicializado con baja confianza para mejor detección")
         
         # Cargar modelo LSTM
         try:
