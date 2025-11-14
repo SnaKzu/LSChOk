@@ -146,31 +146,40 @@ def init_ml():
 def extract_landmarks(frame_bgr):
     """Extraer landmarks de un frame BGR"""
     if not hands:
+        logger.error("❌ MediaPipe Hands no inicializado")
         return None
     
-    # Convertir BGR a RGB
-    frame_rgb = cv2.cvtColor(frame_bgr, cv2.COLOR_BGR2RGB)
-    
-    # Procesar sin timestamp para evitar errores de MediaPipe
-    # MediaPipe requiere timestamps monotónicos, pero no son necesarios
-    # para detección de manos en modo no-streaming
-    results = hands.process(frame_rgb)
-    
-    if not results.multi_hand_landmarks:
+    try:
+        # Convertir BGR a RGB
+        frame_rgb = cv2.cvtColor(frame_bgr, cv2.COLOR_BGR2RGB)
+        
+        logger.debug(f"🔄 Frame convertido a RGB: {frame_rgb.shape}")
+        
+        # Procesar sin timestamp para evitar errores de MediaPipe
+        results = hands.process(frame_rgb)
+        
+        if not results.multi_hand_landmarks:
+            logger.debug("👋 MediaPipe no encontró landmarks")
+            return None
+        
+        logger.info(f"✋ Detectadas {len(results.multi_hand_landmarks)} mano(s)")
+        
+        # Extraer landmarks (siempre 126 valores)
+        frame_data = [0.0] * 126
+        idx = 0
+        
+        for hand_landmarks in results.multi_hand_landmarks[:2]:  # Máximo 2 manos
+            for landmark in hand_landmarks.landmark:
+                frame_data[idx] = landmark.x
+                frame_data[idx + 1] = landmark.y
+                frame_data[idx + 2] = landmark.z
+                idx += 3
+        
+        return frame_data
+        
+    except Exception as e:
+        logger.error(f"❌ Error en extract_landmarks: {e}")
         return None
-    
-    # Extraer landmarks (siempre 126 valores)
-    frame_data = [0.0] * 126
-    idx = 0
-    
-    for hand_landmarks in results.multi_hand_landmarks[:2]:  # Máximo 2 manos
-        for landmark in hand_landmarks.landmark:
-            frame_data[idx] = landmark.x
-            frame_data[idx + 1] = landmark.y
-            frame_data[idx + 2] = landmark.z
-            idx += 3
-    
-    return frame_data
 
 def predict_from_sequence(sequence_buffer):
     """Hacer predicción desde buffer de secuencia"""
@@ -308,16 +317,19 @@ def handle_process_frame(data):
         frame_bgr = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
         
         if frame_bgr is None:
-            logger.error(f"Error decodificando imagen")
+            logger.error(f"⚠️ Error decodificando imagen")
             emit('error', {'message': 'Error decodificando imagen'})
             return
         
-        logger.debug(f"📸 Frame recibido: {frame_bgr.shape}")
+        logger.info(f"📸 Frame recibido: shape={frame_bgr.shape}, dtype={frame_bgr.dtype}, size={len(img_bytes)} bytes")
         
         # Extraer landmarks
         landmarks = extract_landmarks(frame_bgr)
         
-        logger.debug(f"👋 Landmarks detectados: {landmarks is not None}")
+        if landmarks is not None:
+            logger.info(f"✅ Landmarks detectados: {len(landmarks)} valores")
+        else:
+            logger.warning(f"⚠️ No se detectaron manos - Frame shape: {frame_bgr.shape}")
         
         if landmarks:
             # Agregar al buffer
