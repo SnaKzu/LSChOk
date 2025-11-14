@@ -1,1 +1,1 @@
-web: bash -c "export LD_LIBRARY_PATH=$(find /nix/store -name 'libstdc++.so.6' | head -1 | xargs dirname):$LD_LIBRARY_PATH && /opt/venv/bin/gunicorn --worker-class eventlet -w 1 --bind 0.0.0.0:$PORT --chdir /app/backend app_senas:app"
+web: gunicorn --worker-class eventlet -w 1 --bind 0.0.0.0:$PORT --chdir /app/backend app_senas:app
