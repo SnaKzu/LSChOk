@@ -1,7 +1,7 @@
 FROM nixos/nix:latest
 
 # Install system dependencies
-RUN nix-env -iA nixpkgs.python312 nixpkgs.gcc nixpkgs.ffmpeg nixpkgs.libGL nixpkgs.glib
+RUN nix-env -iA nixpkgs.python312 nixpkgs.gcc nixpkgs.ffmpeg nixpkgs.libGL nixpkgs.glib nixpkgs.stdenv.cc.cc.lib
 
 WORKDIR /app
 
