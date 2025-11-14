@@ -26,4 +26,4 @@ RUN echo '#!/bin/sh' > /start.sh && \
     echo 'exec /opt/venv/bin/gunicorn --worker-class eventlet -w 1 --bind 0.0.0.0:$PORT app_senas:app' >> /start.sh && \
     chmod +x /start.sh
 
-CMD ["/bin/sh", "/start.sh"]
+ENTRYPOINT ["/bin/sh", "/start.sh"]
