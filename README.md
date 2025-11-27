@@ -189,7 +189,7 @@ Este proyecto está bajo la Licencia MIT.
 
 ## 👨‍💻 Autor
 
-**Diego** - [SnaKzu](https://github.com/SnaKzu)
+**Diego Canales** - [SnaKzu](https://github.com/SnaKzu)
 
 ## 🙏 Agradecimientos
 

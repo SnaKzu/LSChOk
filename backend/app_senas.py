@@ -12,9 +12,10 @@ import logging
 import numpy as np
 import cv2
 from datetime import datetime
-from flask import Flask, render_template, jsonify, request
+from flask import Flask, render_template, jsonify, request, redirect, url_for, flash, session
 from flask_cors import CORS
 from flask_socketio import SocketIO, emit
+from flask_login import LoginManager, login_user, logout_user, login_required, current_user
 from collections import deque
 
 # Configurar logging
@@ -28,7 +29,25 @@ app = Flask(__name__,
             template_folder='../frontend')
 
 app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'senas-railway-key-2024')
+app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv('DATABASE_URL', 'sqlite:///lsp_users.db')
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 CORS(app)
+
+# Importar modelos y configurar DB
+from models import db, User, Prediction, init_db
+
+# Inicializar base de datos
+db.init_app(app)
+
+# Configurar Flask-Login
+login_manager = LoginManager()
+login_manager.init_app(app)
+login_manager.login_view = 'login'
+login_manager.login_message = 'Por favor inicia sesión para acceder a esta página.'
+
+@login_manager.user_loader
+def load_user(user_id):
+    return User.query.get(int(user_id))
 
 # Configurar SocketIO
 socketio = SocketIO(app, 
@@ -89,7 +108,7 @@ def init_ml():
     """Inicializar modelo y MediaPipe"""
     global modelo, mp_hands, mp_drawing, hands, ML_ENABLED
     
-    logger.info("🔧 Iniciando MediaPipe y modelo LSTM...")
+    logger.info("Iniciando MediaPipe y modelo LSTM...")
     
     try:
         # Importar MediaPipe
@@ -97,7 +116,7 @@ def init_ml():
         mp_hands = mp.solutions.hands
         mp_drawing = mp.solutions.drawing_utils
         
-        logger.info("📦 MediaPipe importado correctamente")
+        logger.info("MediaPipe importado correctamente")
         
         hands = mp_hands.Hands(
             static_image_mode=False,
@@ -105,13 +124,13 @@ def init_ml():
             min_detection_confidence=0.3,
             min_tracking_confidence=0.3
         )
-        logger.info("✅ MediaPipe Hands inicializado con confianza 0.3")
+        logger.info("MediaPipe Hands inicializado con confianza 0.3")
         
         # Cargar modelo LSTM
         try:
             from tensorflow.keras.models import load_model
             
-            logger.info("📦 TensorFlow importado correctamente")
+            logger.info("TensorFlow importado correctamente")
             
             # Buscar modelo en diferentes ubicaciones
             possible_paths = [
@@ -142,17 +161,17 @@ def init_ml():
                 ML_ENABLED = False
                 
         except Exception as e:
-            logger.error(f"❌ Error cargando modelo: {e}")
+            logger.error(f"Error cargando modelo: {e}")
             ML_ENABLED = False
             
     except ImportError as e:
-        logger.error(f"❌ Error importando dependencias MediaPipe: {e}")
+        logger.error(f"Error importando dependencias MediaPipe: {e}")
         ML_ENABLED = False
     except Exception as e:
-        logger.error(f"❌ Error inesperado en init_ml: {e}")
+        logger.error(f"Error inesperado en init_ml: {e}")
         ML_ENABLED = False
     
-    logger.info(f"🏁 Inicialización completa - MediaPipe: {hands is not None}, ML: {ML_ENABLED}")
+    logger.info(f"Inicialización completa - MediaPipe: {hands is not None}, ML: {ML_ENABLED}")
 
 def extract_landmarks(frame_bgr):
     """Extraer landmarks de un frame BGR"""
@@ -238,6 +257,129 @@ def index():
 def demo():
     """Página demo"""
     return render_template('demo.html')
+
+@app.route('/login', methods=['GET', 'POST'])
+def login():
+    """Página de login"""
+    if current_user.is_authenticated:
+        return redirect(url_for('dashboard'))
+    
+    if request.method == 'POST':
+        username = request.form.get('username', '').strip()
+        password = request.form.get('password', '')
+        remember = request.form.get('remember') == 'on'
+        
+        if not username or not password:
+            flash('Por favor completa todos los campos', 'error')
+            return render_template('login.html')
+        
+        # Buscar usuario por username o email
+        user = User.query.filter(
+            (User.username == username) | (User.email == username)
+        ).first()
+        
+        if user and user.check_password(password):
+            if not user.is_active:
+                flash('Tu cuenta está desactivada. Contacta al soporte.', 'error')
+                return render_template('login.html')
+            
+            login_user(user, remember=remember)
+            user.update_last_login()
+            
+            flash(f'¡Bienvenido de vuelta, {user.full_name or user.username}!', 'success')
+            
+            next_page = request.args.get('next')
+            return redirect(next_page) if next_page else redirect(url_for('dashboard'))
+        else:
+            flash('Usuario o contraseña incorrectos', 'error')
+            return render_template('login.html')
+    
+    return render_template('login.html')
+
+@app.route('/register', methods=['GET', 'POST'])
+def register():
+    """Página de registro"""
+    if current_user.is_authenticated:
+        return redirect(url_for('dashboard'))
+    
+    if request.method == 'POST':
+        full_name = request.form.get('full_name', '').strip()
+        username = request.form.get('username', '').strip()
+        email = request.form.get('email', '').strip().lower()
+        password = request.form.get('password', '')
+        password_confirm = request.form.get('password_confirm', '')
+        
+        # Validaciones
+        if not all([full_name, username, email, password, password_confirm]):
+            flash('Por favor completa todos los campos', 'error')
+            return render_template('register.html')
+        
+        if password != password_confirm:
+            flash('Las contraseñas no coinciden', 'error')
+            return render_template('register.html')
+        
+        if len(password) < 6:
+            flash('La contraseña debe tener al menos 6 caracteres', 'error')
+            return render_template('register.html')
+        
+        if len(username) < 3 or len(username) > 20:
+            flash('El usuario debe tener entre 3 y 20 caracteres', 'error')
+            return render_template('register.html')
+        
+        if '@' not in email:
+            flash('Por favor ingresa un email válido', 'error')
+            return render_template('register.html')
+        
+        # Verificar si usuario o email ya existen
+        if User.query.filter_by(username=username).first():
+            flash('El nombre de usuario ya está en uso', 'error')
+            return render_template('register.html')
+        
+        if User.query.filter_by(email=email).first():
+            flash('El email ya está registrado', 'error')
+            return render_template('register.html')
+        
+        # Crear nuevo usuario
+        new_user = User(
+            full_name=full_name,
+            username=username,
+            email=email
+        )
+        new_user.set_password(password)
+        
+        try:
+            db.session.add(new_user)
+            db.session.commit()
+            
+            flash(f'¡Cuenta creada exitosamente! Bienvenido, {full_name}', 'success')
+            
+            # Auto-login después del registro
+            login_user(new_user)
+            new_user.update_last_login()
+            
+            return redirect(url_for('dashboard'))
+        except Exception as e:
+            db.session.rollback()
+            logger.error(f"Error al crear usuario: {e}")
+            flash('Error al crear la cuenta. Por favor intenta nuevamente.', 'error')
+            return render_template('register.html')
+    
+    return render_template('register.html')
+
+@app.route('/logout')
+@login_required
+def logout():
+    """Cerrar sesión"""
+    logout_user()
+    flash('Sesión cerrada correctamente', 'info')
+    return redirect(url_for('index'))
+
+@app.route('/dashboard')
+@login_required
+def dashboard():
+    """Dashboard de usuario"""
+    stats = current_user.get_stats()
+    return render_template('dashboard.html', user=current_user, stats=stats)
 
 @app.route('/health')
 def health():
@@ -423,13 +565,35 @@ def handle_get_stats():
 # ==================== INICIALIZACIÓN ====================
 
 # Inicializar ML al cargar el módulo (para gunicorn)
-logger.info("🚀 Inicializando sistema de reconocimiento de señas...")
+logger.info("Inicializando sistema de reconocimiento de señas...")
 init_ml()
 
 if ML_ENABLED:
-    logger.info("✅ Sistema ML activo")
+    logger.info("Sistema ML activo")
 else:
-    logger.warning("⚠️ Sistema funcionando sin ML")
+    logger.warning("Sistema funcionando sin ML")
+
+# Crear tablas de base de datos si no existen
+with app.app_context():
+    try:
+        db.create_all()
+        logger.info("✅ Base de datos inicializada")
+        
+        # Crear usuario demo si no existe
+        if not User.query.filter_by(username='demo').first():
+            demo_user = User(
+                username='demo',
+                email='demo@lsch.com',
+                full_name='Usuario Demo'
+            )
+            demo_user.set_password('demo123')
+            demo_user.email_verified = True
+            
+            db.session.add(demo_user)
+            db.session.commit()
+            logger.info("✅ Usuario demo creado: demo / demo123")
+    except Exception as e:
+        logger.error(f"Error al inicializar base de datos: {e}")
 
 if __name__ == '__main__':
     # Obtener puerto de Railway o usar 5000
