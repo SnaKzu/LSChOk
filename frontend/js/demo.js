@@ -6,7 +6,7 @@ console.log('🚀 LSP Demo v2.0 Loading...');
 
 class LSPDemo {
     constructor() {
-        console.log('🏗️ LSPDemo Constructor - v2.0');
+        console.log('LSPDemo Constructor - v2.0');
         this.socket = null;
         this.videoElement = document.getElementById('videoElement');
         this.canvasElement = document.getElementById('canvasElement');
@@ -25,7 +25,7 @@ class LSPDemo {
     }
     
     init() {
-        console.log('🔧 LSPDemo Init - v2.0');
+        console.log('LSPDemo Init - v2.0');
         this.setupElements();
         this.setupEventListeners();
         this.initWebSocket();
@@ -83,7 +83,7 @@ class LSPDemo {
         this.cleanupSocket();
         
         // Conectar directamente con Socket.IO (más confiable)
-        console.log('🔄 Conectando directamente con Socket.IO...');
+        console.log('Conectando directamente con Socket.IO...');
         this.initWebSocketDirect();
     }
     
@@ -98,14 +98,14 @@ class LSPDemo {
     }
     
     initWebSocketDirect() {
-        console.log('🔌 Connecting directly with Socket.IO');
+        console.log('Connecting directly with Socket.IO');
         
         // Determinar URL
         const socketUrl = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
             ? 'http://127.0.0.1:5000' 
             : window.location.origin;
         
-        console.log('🌐 Connecting to:', socketUrl);
+        console.log('Connecting to:', socketUrl);
         
         this.socket = io(socketUrl, {
             transports: ['websocket', 'polling'],
@@ -115,23 +115,38 @@ class LSPDemo {
         });
         
         this.socket.on('connect', () => {
-            console.log('✅ Socket.IO connected!');
-            this.updateConnectionStatus('connected', 'Conectado - Modelo LSTM');
-            this.showNotification('🎉 Conectado al servidor', 'success');
+            console.log('Socket.IO connected!');
+            this.updateConnectionStatus('connected', 'Conectado');
+            this.showNotification('Conectado al servidor', 'success');
+        });
+
+        // Handshake de servidor (incluye estado de modelo y frames requeridos)
+        this.socket.on('connected', (data) => {
+            console.log('Server handshake:', data);
+            const framesRequired = (data && data.frames_required) ? data.frames_required : 30;
+            if (data && data.model_loaded === false) {
+                this.updateConnectionStatus('error', 'Conectado, pero sin modelo');
+                this.showNotification('El servidor está conectado pero el modelo no está cargado.', 'error');
+            } else {
+                this.updateConnectionStatus('connected', `Conectado - ${framesRequired} frames`);
+            }
         });
         
         this.socket.on('disconnect', (reason) => {
-            console.log('❌ Socket.IO disconnected:', reason);
+            console.log('Socket.IO disconnected:', reason);
             this.updateConnectionStatus('disconnected', 'Desconectado del servidor');
         });
         
         this.socket.on('connect_error', (error) => {
-            console.error('🚫 Connection error:', error);
+            console.error('Connection error:', error);
             this.updateConnectionStatus('error', 'Error de conexión');
         });
         
         // Eventos del sistema LSTM
         this.socket.on('frame_processed', (data) => {
+            if (data && data.buffer_size !== undefined && data.buffer_size % 30 === 0) {
+                console.log('frame_processed:', data);
+            }
             this.handleFrameProcessed(data);
         });
         
@@ -171,7 +186,7 @@ class LSPDemo {
                 audio: false
             });
             
-            console.log('📹 Cámara iniciada:', {
+            console.log('Cámara iniciada:', {
                 width: this.stream.getVideoTracks()[0].getSettings().width,
                 height: this.stream.getVideoTracks()[0].getSettings().height,
                 frameRate: this.stream.getVideoTracks()[0].getSettings().frameRate
@@ -222,7 +237,7 @@ class LSPDemo {
         this.framesSent = 0;
         this.lastFrameTime = 0;
         
-        console.log('🛑 Cámara detenida');
+        console.log('Cámara detenida');
     }
     
     togglePause() {
@@ -267,13 +282,13 @@ class LSPDemo {
                     
                     // Actualizar contador visual cada 10 frames
                     if (this.framesSent % 10 === 0) {
-                        console.log(`📹 Frames enviados: ${this.framesSent}`);
+                        console.log(`Frames enviados: ${this.framesSent}`);
                     }
                 } else {
-                    console.warn('⚠️ Socket desconectado, frame no enviado');
+                    console.warn('Socket desconectado, frame no enviado');
                 }
             } catch (error) {
-                console.error('❌ Error capturando frame:', error);
+                console.error('Error capturando frame:', error);
             }
         }
         
@@ -337,7 +352,7 @@ class LSPDemo {
         this.animatePrediction();
         
         // Notificación
-        this.showNotification(`🤟 ${data.word.toUpperCase()} (${confidence}%)`, 'success');
+        this.showNotification(`${data.word.toUpperCase()} (${confidence}%)`, 'success');
     }
     
     addToSentence(word, confidence) {

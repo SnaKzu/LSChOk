@@ -230,6 +230,21 @@ def init_ml():
                 modelo = load_model(modelo_path)
                 ML_ENABLED = True
                 logger.info(f"Modelo LSTM cargado desde: {modelo_path}")
+                # Validar consistencia entre salida del modelo y labels cargadas
+                try:
+                    output_units = int(getattr(modelo, "output_shape", [None, 0])[-1])
+                except Exception:
+                    output_units = 0
+
+                if output_units and len(PALABRAS) != output_units:
+                    logger.warning(
+                        "Mismatch modelo/labels: "
+                        f"modelo tiene {output_units} clases, labels tienen {len(PALABRAS)}. "
+                        "Usando etiquetas sintéticas para evitar fallo de predicción."
+                    )
+                    PALABRAS = [f"CLASS_{i}" for i in range(output_units)]
+                    LABELS_MAP = {lid: lid for lid in PALABRAS}
+
                 logger.info(f"Vocabulario ({len(PALABRAS)}): {', '.join(PALABRAS)}")
                 logger.info(f"Normalización landmarks: {'ON' if NORMALIZATION_AVAILABLE else 'OFF'}")
             else:
@@ -310,18 +325,28 @@ def predict_from_sequence(sequence_buffer):
         
         # Predecir
         predicciones = modelo.predict(secuencia, verbose=0)[0]
-        idx_prediccion = np.argmax(predicciones)
+        predicciones = np.asarray(predicciones, dtype=np.float32)
+        n_classes = int(predicciones.shape[0])
+        idx_prediccion = int(np.argmax(predicciones))
         confianza = float(predicciones[idx_prediccion])
 
-        # Output estable: id + etiqueta humana
-        label_id = PALABRAS[int(idx_prediccion)] if PALABRAS else str(idx_prediccion)
+        def _label_id_for_index(i: int) -> str:
+            if 0 <= i < len(PALABRAS):
+                return str(PALABRAS[i])
+            return f"CLASS_{i}"
+
+        label_id = _label_id_for_index(idx_prediccion)
         label_human = LABELS_MAP.get(label_id, label_id)
+
+        all_predictions = {
+            _label_id_for_index(i): float(predicciones[i] * 100) for i in range(n_classes)
+        }
         
         return {
             'word': label_human,
             'word_id': label_id,
             'confidence': confianza * 100,
-            'all_predictions': {PALABRAS[i]: float(predicciones[i] * 100) for i in range(len(PALABRAS))}
+            'all_predictions': all_predictions,
         }
         
     except Exception as e:
