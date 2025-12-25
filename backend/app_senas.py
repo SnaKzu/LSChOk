@@ -1,6 +1,9 @@
-"""
-Backend Flask para Reconocimiento de Lenguaje de Señas
-Integración del modelo LSTM entrenado (DIEGO, GRACIAS, HOLA, MI_NOMBRE, NOS_VEMOS)
+"""Backend Flask para Reconocimiento de Lenguaje de Señas.
+
+Adaptado a:
+- Etiquetas dinámicas desde labels.json (mismo orden que entrenamiento)
+- Secuencias de 30 frames
+- Extracción de landmarks consistente (si landmarks_normalization está disponible)
 """
 
 import os
@@ -63,9 +66,65 @@ modelo = None
 mp_hands = None
 mp_drawing = None
 hands = None
-PALABRAS = ["DIEGO", "GRACIAS", "HOLA", "MI_NOMBRE", "NOS_VEMOS"]
-FRAMES_POR_SECUENCIA = 60
+PALABRAS = []  # label_ids (ordenadas) para el modelo
+LABELS_MAP = {}  # label_id -> etiqueta humana
+FRAMES_POR_SECUENCIA = 30
 ML_ENABLED = False
+
+# Normalización de landmarks (opcional, si existe en el repo)
+NORMALIZATION_AVAILABLE = False
+try:
+    ml_scripts_dir = os.path.abspath(
+        os.path.join(os.path.dirname(__file__), "..", "..", "ModeloML", "Scripts")
+    )
+    if os.path.isdir(ml_scripts_dir) and ml_scripts_dir not in sys.path:
+        sys.path.insert(0, ml_scripts_dir)
+    from landmarks_normalization import frame_from_mediapipe_results  # type: ignore
+
+    NORMALIZATION_AVAILABLE = True
+except Exception:
+    frame_from_mediapipe_results = None  # type: ignore
+    NORMALIZATION_AVAILABLE = False
+
+
+def _get_data_root() -> str:
+    """Resolve dataset root for labels.json.
+
+    Priority:
+    1) env var LSCH_DATA_DIR
+    2) repo_root/ModeloML/Scripts/DataLS
+    3) web-app/DataLS
+    """
+    env = os.environ.get("LSCH_DATA_DIR")
+    if env:
+        return env
+
+    repo_root = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
+    candidate = os.path.join(repo_root, "ModeloML", "Scripts", "DataLS")
+    if os.path.isdir(candidate):
+        return candidate
+
+    web_root = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+    return os.path.join(web_root, "DataLS")
+
+
+def _load_labels() -> tuple[list[str], dict[str, str]]:
+    """Load labels.json and return sorted label IDs + mapping to human labels."""
+    data_root = _get_data_root()
+    labels_path = os.path.join(data_root, "labels.json")
+    if not os.path.exists(labels_path):
+        return [], {}
+
+    try:
+        with open(labels_path, "r", encoding="utf-8") as f:
+            labels = json.load(f)
+        if not isinstance(labels, dict) or not labels:
+            return [], {}
+        label_ids = sorted(labels.keys())
+        return label_ids, {str(k): str(v) for k, v in labels.items()}
+    except Exception as e:
+        logger.warning(f"labels.json inválido: {labels_path} ({e})")
+        return [], {}
 
 # Sesiones de usuarios
 user_sessions = {}
@@ -106,7 +165,7 @@ class UserSession:
 
 def init_ml():
     """Inicializar modelo y MediaPipe"""
-    global modelo, mp_hands, mp_drawing, hands, ML_ENABLED
+    global modelo, mp_hands, mp_drawing, hands, ML_ENABLED, PALABRAS, LABELS_MAP
     
     logger.info("Iniciando MediaPipe y modelo LSTM...")
     
@@ -121,25 +180,44 @@ def init_ml():
         hands = mp_hands.Hands(
             static_image_mode=False,
             max_num_hands=2,
-            min_detection_confidence=0.3,
-            min_tracking_confidence=0.3
+            min_detection_confidence=0.5,
+            min_tracking_confidence=0.3,
+            model_complexity=0,
         )
-        logger.info("MediaPipe Hands inicializado con confianza 0.3")
+        logger.info("MediaPipe Hands inicializado")
         
+        # Cargar labels dinámicas (si existe labels.json)
+        label_ids, labels_map = _load_labels()
+        if label_ids:
+            PALABRAS = label_ids
+            LABELS_MAP = labels_map
+            logger.info(f"Labels cargadas: {len(PALABRAS)}")
+        else:
+            # Fallback histórico (por si no hay labels.json en deploy)
+            PALABRAS = ["DIEGO", "GRACIAS", "HOLA", "MI_NOMBRE", "NOS_VEMOS"]
+            LABELS_MAP = {w: w for w in PALABRAS}
+            logger.warning("labels.json no encontrado; usando vocabulario hardcodeado")
+
         # Cargar modelo LSTM
         try:
-            from tensorflow.keras.models import load_model
+            import tensorflow as tf
+            load_model = tf.keras.models.load_model
             
             logger.info("TensorFlow importado correctamente")
             
             # Buscar modelo en diferentes ubicaciones
             possible_paths = [
+                # Prefer final model if present
+                'modelo_señas_final.h5',
                 'modelo_señas_best.h5',
+                '../modelo_señas_final.h5',
                 '../modelo_señas_best.h5',
+                '../../modelo_señas_final.h5',
                 '../../modelo_señas_best.h5',
-                '../../Tensorflow/modelo_señas_best.h5',
-                os.path.join(os.path.dirname(__file__), '..', '..', 'Tensorflow', 'modelo_señas_best.h5'),
-                os.path.join(os.path.dirname(__file__), '..', '..', 'modelo_señas_best.h5')
+                os.path.join(os.path.dirname(__file__), '..', '..', 'web-app', 'modelo_señas_final.h5'),
+                os.path.join(os.path.dirname(__file__), '..', '..', 'web-app', 'modelo_señas_best.h5'),
+                os.path.join(os.path.dirname(__file__), '..', '..', 'modelo_señas_final.h5'),
+                os.path.join(os.path.dirname(__file__), '..', '..', 'modelo_señas_best.h5'),
             ]
             
             modelo_path = None
@@ -152,7 +230,8 @@ def init_ml():
                 modelo = load_model(modelo_path)
                 ML_ENABLED = True
                 logger.info(f"Modelo LSTM cargado desde: {modelo_path}")
-                logger.info(f"Vocabulario: {', '.join(PALABRAS)}")
+                logger.info(f"Vocabulario ({len(PALABRAS)}): {', '.join(PALABRAS)}")
+                logger.info(f"Normalización landmarks: {'ON' if NORMALIZATION_AVAILABLE else 'OFF'}")
             else:
                 logger.warning("Modelo no encontrado en rutas esperadas")
                 logger.info("Ubicaciones buscadas:")
@@ -193,18 +272,21 @@ def extract_landmarks(frame_bgr):
             return None
         
         logger.info(f"Detectadas {len(results.multi_hand_landmarks)} mano(s)")
-        
-        # Extraer landmarks (siempre 126 valores)
+
+        # Prefer: extracción normalizada consistente con entrenamiento
+        if frame_from_mediapipe_results is not None:
+            frame_data = frame_from_mediapipe_results(results, rotate_palm=True)
+            return frame_data
+
+        # Fallback: extracción cruda
         frame_data = [0.0] * 126
         idx = 0
-        
         for hand_landmarks in results.multi_hand_landmarks[:2]:  # Máximo 2 manos
             for landmark in hand_landmarks.landmark:
                 frame_data[idx] = landmark.x
                 frame_data[idx + 1] = landmark.y
                 frame_data[idx + 2] = landmark.z
                 idx += 3
-        
         return frame_data
         
     except Exception as e:
@@ -216,17 +298,12 @@ def predict_from_sequence(sequence_buffer):
     if not ML_ENABLED or not modelo:
         return None
     
-    if len(sequence_buffer) < 30:  # Mínimo 30 frames
+    if len(sequence_buffer) < FRAMES_POR_SECUENCIA:
         return None
     
     try:
-        # Convertir a array numpy
-        secuencia = np.array(list(sequence_buffer))
-        
-        # Aplicar padding si es necesario
-        if len(secuencia) < FRAMES_POR_SECUENCIA:
-            padding = np.zeros((FRAMES_POR_SECUENCIA - len(secuencia), 126))
-            secuencia = np.vstack([secuencia, padding])
+        # Convertir a array numpy (tomar los últimos N frames)
+        secuencia = np.array(list(sequence_buffer)[-FRAMES_POR_SECUENCIA:], dtype=np.float32)
         
         # Expandir dimensiones para batch
         secuencia = np.expand_dims(secuencia, axis=0)
@@ -235,9 +312,14 @@ def predict_from_sequence(sequence_buffer):
         predicciones = modelo.predict(secuencia, verbose=0)[0]
         idx_prediccion = np.argmax(predicciones)
         confianza = float(predicciones[idx_prediccion])
+
+        # Output estable: id + etiqueta humana
+        label_id = PALABRAS[int(idx_prediccion)] if PALABRAS else str(idx_prediccion)
+        label_human = LABELS_MAP.get(label_id, label_id)
         
         return {
-            'word': PALABRAS[idx_prediccion],
+            'word': label_human,
+            'word_id': label_id,
             'confidence': confianza * 100,
             'all_predictions': {PALABRAS[i]: float(predicciones[i] * 100) for i in range(len(PALABRAS))}
         }
@@ -406,8 +488,11 @@ def api_health():
 @app.route('/api/vocabulary')
 def api_vocabulary():
     """Obtener vocabulario disponible"""
+    vocabulary_map = {lid: LABELS_MAP.get(lid, lid) for lid in PALABRAS}
     return jsonify({
-        'vocabulary': PALABRAS,
+        'vocabulary': vocabulary_map,
+        'vocabulary_list': list(vocabulary_map.values()),
+        'label_ids': PALABRAS,
         'size': len(PALABRAS),
         'timestamp': datetime.now().isoformat()
     })
@@ -422,11 +507,15 @@ def handle_connect(auth=None):
     
     logger.info(f"Cliente conectado: {session_id}")
     
+    vocabulary_map = {lid: LABELS_MAP.get(lid, lid) for lid in PALABRAS}
+
     emit('connected', {
         'session_id': session_id,
         'ml_enabled': ML_ENABLED,
         'model_loaded': modelo is not None,
-        'vocabulary': PALABRAS,
+        'vocabulary': vocabulary_map,
+        'vocabulary_list': list(vocabulary_map.values()),
+        'label_ids': PALABRAS,
         'frames_required': FRAMES_POR_SECUENCIA,
         'timestamp': datetime.now().isoformat()
     })
@@ -495,21 +584,22 @@ def handle_process_frame(data):
                 'buffer_size': session.get_buffer_size(),
                 'max_size': FRAMES_POR_SECUENCIA,
                 'hands_detected': True,
-                'ready_to_predict': session.get_buffer_size() >= 30
+                'ready_to_predict': session.get_buffer_size() >= FRAMES_POR_SECUENCIA
             })
             
             # Intentar predicción si tenemos suficientes frames
-            if session.get_buffer_size() >= 30:
+            if session.get_buffer_size() >= FRAMES_POR_SECUENCIA:
                 prediction = predict_from_sequence(session.buffer)
                 
                 if prediction and prediction['confidence'] > 60:  # Umbral de confianza
                     # Evitar predicciones repetidas
-                    if session.last_prediction != prediction['word']:
-                        session.last_prediction = prediction['word']
+                    if session.last_prediction != prediction['word_id']:
+                        session.last_prediction = prediction['word_id']
                         session.prediction_count += 1
                         
                         emit('prediction', {
                             'word': prediction['word'],
+                            'word_id': prediction.get('word_id'),
                             'confidence': round(prediction['confidence'], 2),
                             'all_predictions': prediction['all_predictions'],
                             'method': 'LSTM_TensorFlow',
@@ -517,7 +607,7 @@ def handle_process_frame(data):
                             'prediction_number': session.prediction_count
                         })
                         
-                        logger.info(f"Predicción: {prediction['word']} ({prediction['confidence']:.1f}%)")
+                        logger.info(f"Predicción: {prediction['word_id']} -> {prediction['word']} ({prediction['confidence']:.1f}%)")
         else:
             logger.warning(f"No se detectaron manos en el frame")
             # Sin manos detectadas, limpiar buffer
@@ -577,7 +667,7 @@ else:
 with app.app_context():
     try:
         db.create_all()
-        logger.info("✅ Base de datos inicializada")
+        logger.info("Base de datos inicializada")
         
         # Crear usuario demo si no existe
         if not User.query.filter_by(username='demo').first():
@@ -591,7 +681,7 @@ with app.app_context():
             
             db.session.add(demo_user)
             db.session.commit()
-            logger.info("✅ Usuario demo creado: demo / demo123")
+            logger.info("Usuario demo creado: demo / demo123")
     except Exception as e:
         logger.error(f"Error al inicializar base de datos: {e}")
 

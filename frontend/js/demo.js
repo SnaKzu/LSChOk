@@ -406,17 +406,19 @@ class LSPDemo {
         if (data.buffer_size !== undefined) {
             this.frameCounterEl.textContent = data.buffer_size;
         }
+
+        const maxSize = data.max_size || 30;
         
         // Actualizar indicadores visuales según detección de manos
         if (data.hands_detected) {
             this.recordingIndicator.classList.add('active');
             this.statusBadge.innerHTML = `
                 <i class="fas fa-hand-paper"></i>
-                <span>Manos detectadas (Buffer: ${data.buffer_size}/60)</span>
+                <span>Manos detectadas (Buffer: ${data.buffer_size}/${maxSize})</span>
             `;
             
             // Mostrar progreso de buffer
-            const progress = Math.round((data.buffer_size / 60) * 100);
+            const progress = Math.round((data.buffer_size / maxSize) * 100);
             this.statusBadge.style.background = `linear-gradient(90deg, #10b981 ${progress}%, #6b7280 ${progress}%)`;
         } else {
             this.recordingIndicator.classList.remove('active');
@@ -557,12 +559,12 @@ document.head.appendChild(style);
 document.addEventListener('DOMContentLoaded', () => {
     // Verificar dependencias antes de inicializar
     if (typeof io === 'undefined') {
-        console.error('❌ Socket.IO no está disponible');
+        console.error('Socket.IO no está disponible');
         alert('Error: Socket.IO no se cargó correctamente. Recarga la página.');
         return;
     }
     
-    console.log('✅ Socket.IO verificado, inicializando demo...');
+    console.log('Socket.IO verificado, inicializando demo...');
     window.lspDemo = new LSPDemo();
 });
 

@@ -1,25 +1,23 @@
-# 🤟 Sistema de Reconocimiento de Lenguaje de Señas Chilenas (LSCh)
+# Sistema de Reconocimiento de Lenguaje de Señas Chilenas (LSCh)
 
 Sistema web de reconocimiento en tiempo real de lenguaje de señas chilenas usando LSTM y MediaPipe.
 
-## 🎯 Características
+## Características
 
-- ✅ Reconocimiento en tiempo real de 5 palabras LSCh
-- ✅ Modelo LSTM con 90.67% de precisión
-- ✅ Interfaz web interactiva
-- ✅ WebSocket para comunicación en tiempo real
-- ✅ Procesamiento con MediaPipe Hands
+- Reconocimiento en tiempo real (vocabulario dinámico)
+- Modelo LSTM con 90.67% de precisión
+- Interfaz web interactiva
+- WebSocket para comunicación en tiempo real
+- Procesamiento con MediaPipe Hands
 
-## 📚 Vocabulario
+## Vocabulario
 
-El sistema reconoce las siguientes palabras en LSCh:
-- DIEGO
-- GRACIAS
-- HOLA
-- MI_NOMBRE
-- NOS_VEMOS
+El vocabulario ya no está hardcodeado.
 
-## 🚀 Instalación
+- Se carga dinámicamente desde `labels.json` (mismo orden que en el entrenamiento).
+- Si `labels.json` no existe en el servidor, se usa un vocabulario de respaldo para la demo.
+
+## Instalación
 
 ### Requisitos
 - Python 3.10+
@@ -56,7 +54,7 @@ python backend/app_senas.py
 http://localhost:5000/demo
 ```
 
-## 🏗️ Arquitectura
+## Arquitectura
 
 ### Backend
 - **Flask + SocketIO**: Servidor web y WebSocket
@@ -70,19 +68,20 @@ http://localhost:5000/demo
 - **Canvas API**: Captura y procesamiento de video
 
 ### Modelo LSTM
-- **Arquitectura**: LSTM(64) → LSTM(64) → Dense(32) → Dense(5)
+- **Entrada**: secuencias de 30 frames (126 features por frame)
+- **Arquitectura**: LSTM(64) → LSTM(64) → Dense(32) → Dense(N)
 - **Parámetros**: 84,000
 - **Precisión**: 90.67%
 - **Dataset**: 500 secuencias (100 por palabra)
 
-## 📊 Flujo de Datos
+## Flujo de Datos
 
 ```
 Cliente → WebSocket → Servidor
   ↓                      ↓
 Video                MediaPipe (landmarks)
   ↓                      ↓
-Base64               Buffer (60 frames)
+Base64               Buffer (30 frames)
                          ↓
                     LSTM Model
                          ↓
@@ -91,7 +90,7 @@ Base64               Buffer (60 frames)
 Cliente ← WebSocket ← Servidor
 ```
 
-## 🎨 Interfaz
+## Interfaz
 
 La aplicación incluye:
 - Panel de video en vivo
@@ -101,7 +100,7 @@ La aplicación incluye:
 - Historial de predicciones
 - Estadísticas de sesión
 
-## 🔧 Configuración
+## Configuración
 
 ### Variables de Entorno (Producción)
 ```
@@ -110,14 +109,14 @@ SECRET_KEY=<tu-clave-secura>
 PYTHONUNBUFFERED=1
 ```
 
-## 📝 Uso
+## Uso
 
 1. **Activar Cámara**: Click en "Activar Cámara"
 2. **Permitir Acceso**: Aceptar permisos de webcam
 3. **Realizar Señas**: Ejecutar señas del vocabulario LSCh
 4. **Ver Resultados**: Las predicciones aparecen automáticamente
 
-## 🛠️ Desarrollo
+## Desarrollo
 
 ### Estructura del Proyecto
 ```
@@ -141,7 +140,7 @@ web-app/
 - `EntrenarModeloSeñas.py`: Entrena el modelo LSTM
 - `InferenciaSeñas.py`: Prueba local del modelo
 
-## 🚢 Despliegue
+## Despliegue
 
 ### Railway
 1. Conectar repositorio a Railway
@@ -155,7 +154,7 @@ Similar a Railway, asegurarse de:
 - Establecer `PORT` como variable de entorno
 - Verificar que `modelo_señas_best.h5` esté incluido
 
-## 📈 Performance
+## Performance
 
 - **FPS Frontend**: 30
 - **FPS Backend**: ~20 (rate limiting)
@@ -163,7 +162,7 @@ Similar a Railway, asegurarse de:
 - **Confianza promedio**: 95%
 - **Uso RAM**: ~1.2 GB
 
-## ⚠️ Notas
+## Notas
 
 ### Advertencia MediaPipe
 ```
@@ -174,7 +173,7 @@ Esta advertencia es normal en Windows y no afecta el funcionamiento.
 ### Rate Limiting
 El sistema limita el procesamiento a 20 FPS para evitar sobrecarga y errores de timestamp en MediaPipe.
 
-## 🤝 Contribuir
+## Contribuir
 
 Las contribuciones son bienvenidas! Por favor:
 1. Fork el proyecto
@@ -183,15 +182,15 @@ Las contribuciones son bienvenidas! Por favor:
 4. Push a la rama
 5. Abrir un Pull Request
 
-## 📄 Licencia
+## Licencia
 
 Este proyecto está bajo la Licencia MIT.
 
-## 👨‍💻 Autor
+## Autor
 
 **Diego Canales** - [SnaKzu](https://github.com/SnaKzu)
 
-## 🙏 Agradecimientos
+## Agradecimientos
 
 - MediaPipe por la detección de manos
 - TensorFlow/Keras por el framework de ML
@@ -200,4 +199,4 @@ Este proyecto está bajo la Licencia MIT.
 
 ---
 
-**Hecho con ❤️ para la comunidad sorda chilena** 🤟
+**Hecho con ❤️ para la comunidad sorda chilena**

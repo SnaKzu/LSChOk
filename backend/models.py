@@ -173,7 +173,7 @@ def init_db(app):
             
             db.session.add(demo_user)
             db.session.commit()
-            print("✅ Usuario demo creado: demo / demo123")
+            print("Usuario demo creado: demo / demo123")
 
 def get_system_stats():
     """Obtener estadísticas generales del sistema"""

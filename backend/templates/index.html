@@ -3,8 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="description" content="Reconocimiento de Lengua de Señas Peruana en tiempo real con Inteligencia Artificial">
-    <title>LSP Recognition - Lengua de Señas Peruana</title>
+    <meta name="description" content="Reconocimiento de Lengua de Señas Chilena en tiempo real con Inteligencia Artificial">
+    <title>LSCh Recognition - Lengua de Señas Chilena</title>
     
     <!-- Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -24,7 +24,7 @@
         <div class="container">
             <div class="nav-brand">
                 <i class="fas fa-hand-paper"></i>
-                <span>LSP Recognition</span>
+                <span>LSCh Recognition</span>
             </div>
             <ul class="nav-menu">
                 <li><a href="{{ url_for('index') }}#inicio" class="nav-link active">Inicio</a></li>
@@ -60,11 +60,11 @@
             <div class="hero-text">
                 <h1 class="hero-title">
                     Reconocimiento de
-                    <span class="gradient-text">Lengua de Señas Peruana</span>
+                    <span class="gradient-text">Lengua de Señas Chilena</span>
                     en Tiempo Real
                 </h1>
                 <p class="hero-description">
-                    Tecnología de Inteligencia Artificial que traduce la Lengua de Señas Peruana 
+                    Tecnología de Inteligencia Artificial que traduce la Lengua de Señas Chilena 
                     a texto en tiempo real usando MediaPipe y redes neuronales LSTM.
                 </p>
                 <div class="hero-buttons">
@@ -79,7 +79,7 @@
                 </div>
                 <div class="hero-stats">
                     <div class="stat">
-                        <span class="stat-number" data-target="14">0</span>
+                        <span class="stat-number" data-target="0">0</span>
                         <span class="stat-label">Palabras Reconocidas</span>
                     </div>
                     <div class="stat">
@@ -162,10 +162,10 @@
                     <div class="feature-icon">
                         <i class="fas fa-language"></i>
                     </div>
-                    <h3 class="feature-title">14 Palabras LSP</h3>
+                    <h3 class="feature-title">Vocabulario Dinámico (LSCh)</h3>
                     <p class="feature-description">
-                        Vocabulario completo de saludos, expresiones comunes y 
-                        frases de cortesía en Lengua de Señas Peruana.
+                        El vocabulario se carga dinámicamente desde el servidor
+                        (según el modelo entrenado y `labels.json`).
                     </p>
                 </div>
                 
@@ -198,7 +198,7 @@
                     <h3 class="feature-title">Open Source</h3>
                     <p class="feature-description">
                         Código abierto y documentado para investigadores y 
-                        desarrolladores interesados en LSP.
+                        desarrolladores interesados en LSCh.
                     </p>
                 </div>
             </div>
@@ -209,7 +209,7 @@
     <section id="vocabulario" class="vocabulary">
         <div class="container">
             <div class="section-header">
-                <h2 class="section-title">Vocabulario LSP</h2>
+                <h2 class="section-title">Vocabulario LSCh</h2>
                 <p class="section-subtitle">
                     Palabras y frases que el sistema puede reconocer
                 </p>
@@ -293,7 +293,7 @@
             <div class="cta-content">
                 <h2 class="cta-title">¿Listo para probar?</h2>
                 <p class="cta-description">
-                    Experimenta el reconocimiento de Lengua de Señas Peruana en tu navegador
+                    Experimenta el reconocimiento de Lengua de Señas Chilena en tu navegador
                 </p>
                 <a href="{{ url_for('demo') }}" class="btn btn-cta">
                     <i class="fas fa-video"></i>
@@ -308,8 +308,8 @@
         <div class="container">
             <div class="footer-content">
                 <div class="footer-section">
-                    <h4>LSP Recognition</h4>
-                    <p>Proyecto de reconocimiento de Lengua de Señas Peruana usando IA</p>
+                    <h4>LSCh Recognition</h4>
+                    <p>Proyecto de reconocimiento de Lengua de Señas Chilena usando IA</p>
                     <div class="social-links">
                         <a href="#" aria-label="GitHub"><i class="fab fa-github"></i></a>
                         <a href="#" aria-label="LinkedIn"><i class="fab fa-linkedin"></i></a>
@@ -347,8 +347,8 @@
             </div>
             
             <div class="footer-bottom">
-                <p>&copy; 2025 LSP Recognition Project. Todos los derechos reservados.</p>
-                <p>Hecho con <i class="fas fa-heart"></i> para la comunidad sorda peruana</p>
+                <p>&copy; 2025 LSCh Recognition Project. Todos los derechos reservados.</p>
+                <p>Hecho con <i class="fas fa-heart"></i> para la comunidad sorda chilena</p>
             </div>
         </div>
     </footer>

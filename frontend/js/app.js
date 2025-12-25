@@ -138,6 +138,26 @@ async function loadVocabulary() {
     try {
         const response = await fetch('/api/vocabulary');
         const data = await response.json();
+
+        // Update "Palabras Reconocidas" stat dynamically
+        const stats = document.querySelectorAll('.hero-stats .stat');
+        stats.forEach(stat => {
+            const labelEl = stat.querySelector('.stat-label');
+            const numberEl = stat.querySelector('.stat-number');
+            if (!labelEl || !numberEl) return;
+
+            const labelText = (labelEl.textContent || '').toLowerCase();
+            if (labelText.includes('palabras reconocidas')) {
+                const size = Number.isFinite(data.size) ? data.size : null;
+                const count = size !== null ? size : (
+                    data.vocabulary && typeof data.vocabulary === 'object' && !Array.isArray(data.vocabulary)
+                        ? Object.keys(data.vocabulary).length
+                        : (Array.isArray(data.label_ids) ? data.label_ids.length : 0)
+                );
+                numberEl.setAttribute('data-target', String(count));
+                numberEl.textContent = '0';
+            }
+        });
         
         // Clear skeleton loaders
         vocabularyGrid.innerHTML = '';
@@ -160,8 +180,19 @@ async function loadVocabulary() {
             'default': 'fa-hand-paper'
         };
         
+        // Normalize vocabulary to an entries array: [[labelId, humanLabel], ...]
+        const vocabularyEntries = (() => {
+            if (data.vocabulary && typeof data.vocabulary === 'object' && !Array.isArray(data.vocabulary)) {
+                return Object.entries(data.vocabulary);
+            }
+            if (Array.isArray(data.label_ids) && Array.isArray(data.vocabulary)) {
+                return data.label_ids.map((id, i) => [id, data.vocabulary[i] ?? id]);
+            }
+            return [];
+        })();
+
         // Create vocabulary cards
-        Object.entries(data.vocabulary).forEach(([wordId, wordLabel]) => {
+        vocabularyEntries.forEach(([wordId, wordLabel]) => {
             const card = document.createElement('div');
             card.className = 'vocabulary-card';
             
