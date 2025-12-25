@@ -80,6 +80,7 @@ DISPLAY_HOLD_SECONDS = 0.8
 REQUIRE_MOTION = True
 MOTION_WINDOW = 12
 MIN_MOTION = 0.004
+MOTION_ARM_SECONDS = 0.6
 
 # Normalización de landmarks (opcional, si existe en el repo)
 NORMALIZATION_AVAILABLE = False
@@ -149,6 +150,10 @@ class UserSession:
         # Estado para estabilidad temporal (gating)
         self.pred_history = deque(maxlen=STABLE_PRED_FRAMES)
         self.last_shown_at = 0.0
+
+        # "Arming" por movimiento: si hubo movimiento reciente, permitimos clasificar
+        # incluso si en los últimos frames el movimiento baja (fin de seña).
+        self.motion_armed_until = 0.0
         
     def add_frame(self, frame_data):
         """Agregar frame al buffer"""
@@ -161,6 +166,7 @@ class UserSession:
         self.frame_counter = 0
         self.pred_history.clear()
         self.last_shown_at = 0.0
+        self.motion_armed_until = 0.0
         
     def should_process_frame(self):
         """Verificar si debe procesar el siguiente frame (rate limiting)"""
@@ -407,13 +413,18 @@ def predict_from_sequence_gated(session: UserSession):
             top2 = 0.0
         margin = float(conf - top2)
 
-        # Motion gate
+        # Motion gate (con hysteresis): el movimiento arma la clasificación por un rato.
         motion = _compute_motion(seq)
+        now = time.monotonic()
+        if REQUIRE_MOTION and motion >= MIN_MOTION:
+            session.motion_armed_until = max(session.motion_armed_until, now + MOTION_ARM_SECONDS)
+
+        motion_ok = (not REQUIRE_MOTION) or (now <= session.motion_armed_until)
 
         accepted = (
             conf >= CONFIDENCE_THRESHOLD
             and margin >= MARGIN_THRESHOLD
-            and motion >= MIN_MOTION
+            and motion_ok
         )
 
         session.pred_history.append(idx if accepted else None)
@@ -437,6 +448,7 @@ def predict_from_sequence_gated(session: UserSession):
                 'debug': {
                     'margin': margin,
                     'motion': motion,
+                    'motion_ok': motion_ok,
                 },
             }
 
@@ -734,6 +746,9 @@ def handle_process_frame(data):
                             f"Predicción: {prediction['word_id']} -> {prediction['word']} "
                             f"({float(prediction['confidence']):.1f}%)"
                         )
+
+                        # Reiniciar ventana para que no sea necesario pausar la cámara
+                        session.clear_buffer()
         else:
             # Sin manos detectadas, limpiar buffer
             session.clear_buffer()
