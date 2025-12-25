@@ -84,12 +84,7 @@ MIN_MOTION = 0.004
 # Normalización de landmarks (opcional, si existe en el repo)
 NORMALIZATION_AVAILABLE = False
 try:
-    ml_scripts_dir = os.path.abspath(
-        os.path.join(os.path.dirname(__file__), "..", "..", "ModeloML", "Scripts")
-    )
-    if os.path.isdir(ml_scripts_dir) and ml_scripts_dir not in sys.path:
-        sys.path.insert(0, ml_scripts_dir)
-    from landmarks_normalization import frame_from_mediapipe_results  # type: ignore
+    from landmarks_normalization import frame_from_mediapipe_results
 
     NORMALIZATION_AVAILABLE = True
 except Exception:
