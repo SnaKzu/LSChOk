@@ -71,6 +71,16 @@ LABELS_MAP = {}  # label_id -> etiqueta humana
 FRAMES_POR_SECUENCIA = 30
 ML_ENABLED = False
 
+# --- Anti falsos positivos (igual que InferenciaSeñas.py) ---
+CONFIDENCE_THRESHOLD = 0.90
+MARGIN_THRESHOLD = 0.15
+STABLE_PRED_FRAMES = 8
+DISPLAY_HOLD_SECONDS = 0.8
+
+REQUIRE_MOTION = True
+MOTION_WINDOW = 12
+MIN_MOTION = 0.004
+
 # Normalización de landmarks (opcional, si existe en el repo)
 NORMALIZATION_AVAILABLE = False
 try:
@@ -139,7 +149,11 @@ class UserSession:
         self.start_time = datetime.now()
         self.frame_counter = 0  # Contador secuencial
         self.last_process_time = 0  # Último tiempo de procesamiento
-        self.min_frame_interval = 0.05  # Mínimo 50ms entre frames (20 FPS)
+        self.min_frame_interval = 0.033  # ~30 FPS
+
+        # Estado para estabilidad temporal (gating)
+        self.pred_history = deque(maxlen=STABLE_PRED_FRAMES)
+        self.last_shown_at = 0.0
         
     def add_frame(self, frame_data):
         """Agregar frame al buffer"""
@@ -150,6 +164,8 @@ class UserSession:
         """Limpiar buffer"""
         self.buffer.clear()
         self.frame_counter = 0
+        self.pred_history.clear()
+        self.last_shown_at = 0.0
         
     def should_process_frame(self):
         """Verificar si debe procesar el siguiente frame (rate limiting)"""
@@ -180,9 +196,9 @@ def init_ml():
         hands = mp_hands.Hands(
             static_image_mode=False,
             max_num_hands=2,
-            min_detection_confidence=0.5,
-            min_tracking_confidence=0.3,
-            model_complexity=0,
+            min_detection_confidence=0.7,
+            min_tracking_confidence=0.7,
+            model_complexity=1,
         )
         logger.info("MediaPipe Hands inicializado")
         
@@ -267,6 +283,27 @@ def init_ml():
     
     logger.info(f"Inicialización completa - MediaPipe: {hands is not None}, ML: {ML_ENABLED}")
 
+
+def _label_id_for_index(i: int) -> str:
+    if 0 <= i < len(PALABRAS):
+        return str(PALABRAS[i])
+    return f"CLASS_{i}"
+
+
+def _compute_motion(sequence_30x126: np.ndarray) -> float:
+    """Compute motion metric like InferenciaSeñas.py.
+
+    sequence_30x126: (T, 126)
+    """
+    if not REQUIRE_MOTION:
+        return 1.0
+
+    window = min(MOTION_WINDOW, int(sequence_30x126.shape[0]))
+    if window < 2:
+        return 0.0
+    seq_w = sequence_30x126[-window:, :]
+    return float(np.mean(np.abs(np.diff(seq_w, axis=0))))
+
 def extract_landmarks(frame_bgr):
     """Extraer landmarks de un frame BGR"""
     if not hands:
@@ -286,7 +323,7 @@ def extract_landmarks(frame_bgr):
             logger.debug("MediaPipe no encontró landmarks")
             return None
         
-        logger.info(f"Detectadas {len(results.multi_hand_landmarks)} mano(s)")
+        logger.debug(f"Detectadas {len(results.multi_hand_landmarks)} mano(s)")
 
         # Prefer: extracción normalizada consistente con entrenamiento
         if frame_from_mediapipe_results is not None:
@@ -330,11 +367,6 @@ def predict_from_sequence(sequence_buffer):
         idx_prediccion = int(np.argmax(predicciones))
         confianza = float(predicciones[idx_prediccion])
 
-        def _label_id_for_index(i: int) -> str:
-            if 0 <= i < len(PALABRAS):
-                return str(PALABRAS[i])
-            return f"CLASS_{i}"
-
         label_id = _label_id_for_index(idx_prediccion)
         label_human = LABELS_MAP.get(label_id, label_id)
 
@@ -351,6 +383,75 @@ def predict_from_sequence(sequence_buffer):
         
     except Exception as e:
         logger.error(f"Error en predicción: {e}")
+        return None
+
+
+def predict_from_sequence_gated(session: UserSession):
+    """Predicción robusta (igual que InferenciaSeñas.py).
+
+    Devuelve dict de predicción SOLO cuando hay estabilidad temporal y pasa gating.
+    """
+    if not ML_ENABLED or not modelo:
+        return None
+    if session.get_buffer_size() < FRAMES_POR_SECUENCIA:
+        return None
+
+    try:
+        seq = np.array(list(session.buffer)[-FRAMES_POR_SECUENCIA:], dtype=np.float32)
+        secuencia = np.expand_dims(seq, axis=0)  # (1, 30, 126)
+
+        pred = modelo.predict(secuencia, verbose=0)[0]
+        pred = np.asarray(pred, dtype=np.float32)
+        idx = int(np.argmax(pred))
+        conf = float(pred[idx])
+
+        # Margin gate
+        if pred.shape[0] >= 2:
+            top2 = float(np.partition(pred, -2)[-2])
+        else:
+            top2 = 0.0
+        margin = float(conf - top2)
+
+        # Motion gate
+        motion = _compute_motion(seq)
+
+        accepted = (
+            conf >= CONFIDENCE_THRESHOLD
+            and margin >= MARGIN_THRESHOLD
+            and motion >= MIN_MOTION
+        )
+
+        session.pred_history.append(idx if accepted else None)
+
+        if len(session.pred_history) == STABLE_PRED_FRAMES and all(
+            p is not None and p == session.pred_history[0] for p in session.pred_history
+        ):
+            label_id = _label_id_for_index(idx)
+            label_human = LABELS_MAP.get(label_id, label_id)
+            session.last_shown_at = time.monotonic()
+
+            all_predictions = {
+                _label_id_for_index(i): float(pred[i] * 100) for i in range(int(pred.shape[0]))
+            }
+
+            return {
+                'word': label_human,
+                'word_id': label_id,
+                'confidence': conf * 100,
+                'all_predictions': all_predictions,
+                'debug': {
+                    'margin': margin,
+                    'motion': motion,
+                },
+            }
+
+        # Hold: mientras esté dentro del hold, no forzar limpieza
+        if session.last_shown_at and (time.monotonic() - session.last_shown_at) <= DISPLAY_HOLD_SECONDS:
+            return None
+
+        return None
+    except Exception as e:
+        logger.error(f"Error en predicción (gated): {e}")
         return None
 
 # ==================== RUTAS HTTP ====================
@@ -588,21 +689,23 @@ def handle_process_frame(data):
             emit('error', {'message': 'Error decodificando imagen'})
             return
         
-        logger.info(f"Frame recibido: shape={frame_bgr.shape}, dtype={frame_bgr.dtype}, size={len(img_bytes)} bytes")
+        logger.debug(
+            f"Frame recibido: shape={frame_bgr.shape}, dtype={frame_bgr.dtype}, size={len(img_bytes)} bytes"
+        )
         
         # Extraer landmarks
         landmarks = extract_landmarks(frame_bgr)
         
         if landmarks is not None:
-            logger.info(f"Landmarks detectados: {len(landmarks)} valores")
+            logger.debug(f"Landmarks detectados: {len(landmarks)} valores")
         else:
-            logger.warning(f"No se detectaron manos - Frame shape: {frame_bgr.shape}")
+            logger.debug(f"No se detectaron manos - Frame shape: {frame_bgr.shape}")
         
         if landmarks:
             # Agregar al buffer
             session.add_frame(landmarks)
             
-            logger.info(f"Manos detectadas - Buffer: {session.get_buffer_size()}/{FRAMES_POR_SECUENCIA}")
+            logger.debug(f"Manos detectadas - Buffer: {session.get_buffer_size()}/{FRAMES_POR_SECUENCIA}")
             
             # Emitir estado
             emit('frame_processed', {
@@ -614,29 +717,32 @@ def handle_process_frame(data):
             
             # Intentar predicción si tenemos suficientes frames
             if session.get_buffer_size() >= FRAMES_POR_SECUENCIA:
-                prediction = predict_from_sequence(session.buffer)
-                
-                if prediction and prediction['confidence'] > 60:  # Umbral de confianza
+                prediction = predict_from_sequence_gated(session)
+
+                if prediction:
                     # Evitar predicciones repetidas
                     if session.last_prediction != prediction['word_id']:
                         session.last_prediction = prediction['word_id']
                         session.prediction_count += 1
-                        
+
                         emit('prediction', {
                             'word': prediction['word'],
                             'word_id': prediction.get('word_id'),
-                            'confidence': round(prediction['confidence'], 2),
+                            'confidence': round(float(prediction['confidence']), 2),
                             'all_predictions': prediction['all_predictions'],
-                            'method': 'LSTM_TensorFlow',
+                            'method': 'LSTM_TensorFlow_GATED',
                             'timestamp': datetime.now().isoformat(),
                             'prediction_number': session.prediction_count
                         })
-                        
-                        logger.info(f"Predicción: {prediction['word_id']} -> {prediction['word']} ({prediction['confidence']:.1f}%)")
+
+                        logger.info(
+                            f"Predicción: {prediction['word_id']} -> {prediction['word']} "
+                            f"({float(prediction['confidence']):.1f}%)"
+                        )
         else:
-            logger.warning(f"No se detectaron manos en el frame")
             # Sin manos detectadas, limpiar buffer
             session.clear_buffer()
+            session.last_prediction = None
             emit('frame_processed', {
                 'buffer_size': 0,
                 'max_size': FRAMES_POR_SECUENCIA,

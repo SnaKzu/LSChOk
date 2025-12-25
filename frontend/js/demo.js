@@ -163,7 +163,7 @@ class LSPDemo {
         });
         
         this.socket.on('error', (data) => {
-            console.error('⚠️ Server error:', data.message);
+            console.error('Server error:', data.message);
             this.showNotification('Error: ' + data.message, 'error');
         });
     }
