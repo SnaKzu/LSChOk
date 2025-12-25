@@ -77,6 +77,10 @@ MARGIN_THRESHOLD = 0.15
 STABLE_PRED_FRAMES = 8
 DISPLAY_HOLD_SECONDS = 0.8
 
+# Tolerancia a pérdidas breves de tracking (evita reinicios del buffer por 1-2 frames)
+MAX_MISSED_FRAMES = 6
+MAX_MISSED_SECONDS = 0.7
+
 REQUIRE_MOTION = True
 MOTION_WINDOW = 12
 MIN_MOTION = 0.004
@@ -147,6 +151,10 @@ class UserSession:
         self.last_process_time = 0  # Último tiempo de procesamiento
         self.min_frame_interval = 0.033  # ~30 FPS
 
+        # Tolerancia a frames sin manos
+        self.missed_frames = 0
+        self.last_hands_seen_at = 0.0
+
         # Estado para estabilidad temporal (gating)
         self.pred_history = deque(maxlen=STABLE_PRED_FRAMES)
         self.last_shown_at = 0.0
@@ -159,6 +167,8 @@ class UserSession:
         """Agregar frame al buffer"""
         self.buffer.append(frame_data)
         self.frame_counter += 1
+        self.missed_frames = 0
+        self.last_hands_seen_at = time.monotonic()
         
     def clear_buffer(self):
         """Limpiar buffer"""
@@ -167,6 +177,21 @@ class UserSession:
         self.pred_history.clear()
         self.last_shown_at = 0.0
         self.motion_armed_until = 0.0
+        self.missed_frames = 0
+        self.last_hands_seen_at = 0.0
+
+    def note_hands_missing(self) -> bool:
+        """Registrar que no se detectaron manos.
+
+        Retorna True si se debe limpiar el buffer (pérdida prolongada).
+        """
+        self.missed_frames += 1
+        now = time.monotonic()
+        if self.get_buffer_size() == 0:
+            return False
+        too_many_frames = self.missed_frames > MAX_MISSED_FRAMES
+        too_much_time = self.last_hands_seen_at and (now - self.last_hands_seen_at) > MAX_MISSED_SECONDS
+        return bool(too_many_frames or too_much_time)
         
     def should_process_frame(self):
         """Verificar si debe procesar el siguiente frame (rate limiting)"""
@@ -750,14 +775,17 @@ def handle_process_frame(data):
                         # Reiniciar ventana para que no sea necesario pausar la cámara
                         session.clear_buffer()
         else:
-            # Sin manos detectadas, limpiar buffer
-            session.clear_buffer()
-            session.last_prediction = None
+            # Sin manos detectadas: tolerar pérdidas breves para evitar reinicios del buffer.
+            should_clear = session.note_hands_missing()
+            if should_clear:
+                session.clear_buffer()
+                session.last_prediction = None
+
             emit('frame_processed', {
-                'buffer_size': 0,
+                'buffer_size': session.get_buffer_size(),
                 'max_size': FRAMES_POR_SECUENCIA,
                 'hands_detected': False,
-                'ready_to_predict': False
+                'ready_to_predict': session.get_buffer_size() >= FRAMES_POR_SECUENCIA
             })
     
     except Exception as e:
