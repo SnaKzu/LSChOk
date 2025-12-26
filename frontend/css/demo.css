@@ -130,6 +130,20 @@
     animation: pulse 1s infinite;
 }
 
+.frame-counter {
+    position: absolute;
+    bottom: 20px;
+    right: 20px;
+    background: rgba(0, 0, 0, 0.7);
+    backdrop-filter: blur(10px);
+    color: var(--white);
+    padding: 8px 15px;
+    border-radius: var(--radius-lg);
+    font-weight: 600;
+    font-size: 0.85rem;
+    font-family: 'Courier New', monospace;
+}
+
 .start-overlay {
     position: absolute;
     top: 0;
