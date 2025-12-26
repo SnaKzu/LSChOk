@@ -597,6 +597,11 @@ section {
     box-shadow: var(--shadow-xl);
 }
 
+/* Compatibilidad: ocultar icono si algún cliente cacheó JS antiguo */
+.vocabulary-card .vocabulary-icon {
+    display: none !important;
+}
+
 .vocabulary-word {
     position: relative;
     z-index: 1;
