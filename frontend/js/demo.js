@@ -2,7 +2,7 @@
 // LSP Recognition - Demo Page JavaScript v2.0
 // ================================================
 
-console.log('🚀 LSP Demo v2.0 Loading...');
+console.log('LSP Demo v2.0 Loading...');
 
 class LSPDemo {
     constructor() {
