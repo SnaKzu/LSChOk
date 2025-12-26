@@ -31,7 +31,7 @@
                 <li class="user-menu">
                     <button class="user-button" onclick="toggleUserMenu()">
                         <i class="fas fa-user-circle"></i>
-                        <span id="username">Usuario Demo</span>
+                        <span id="username">{{ user.full_name or user.username }}</span>
                         <i class="fas fa-chevron-down"></i>
                     </button>
                     <div class="user-dropdown" id="userDropdown">
@@ -52,7 +52,7 @@
             <!-- Welcome Section -->
             <div class="welcome-section">
                 <div class="welcome-content">
-                    <h1 id="welcomeMessage">¡Bienvenido, Usuario Demo!</h1>
+                    <h1 id="welcomeMessage">¡Bienvenido, {{ user.full_name or user.username }}!</h1>
                     <p>Aquí puedes ver tus estadísticas y el historial de tus predicciones</p>
                 </div>
                 <div class="welcome-actions">
@@ -69,7 +69,7 @@
                         <i class="fas fa-chart-line"></i>
                     </div>
                     <div class="stat-content">
-                        <h3 id="totalPredictions">42</h3>
+                        <h3 id="totalPredictions">{{ stats.total_predictions }}</h3>
                         <p>Predicciones Totales</p>
                     </div>
                 </div>
@@ -79,7 +79,7 @@
                         <i class="fas fa-bullseye"></i>
                     </div>
                     <div class="stat-content">
-                        <h3 id="avgConfidence">87.5%</h3>
+                        <h3 id="avgConfidence">{{ stats.avg_confidence | round(1) }}%</h3>
                         <p>Confianza Promedio</p>
                     </div>
                 </div>
@@ -89,7 +89,7 @@
                         <i class="fas fa-hands"></i>
                     </div>
                     <div class="stat-content">
-                        <h3 id="uniqueWords">8</h3>
+                        <h3 id="uniqueWords">{{ stats.unique_words }}</h3>
                         <p>Señas Diferentes</p>
                     </div>
                 </div>
@@ -99,7 +99,7 @@
                         <i class="fas fa-clock"></i>
                     </div>
                     <div class="stat-content">
-                        <h3 id="memberSince">20/10/2025</h3>
+                        <h3 id="memberSince">{{ user.created_at.strftime('%d/%m/%Y') }}</h3>
                         <p>Miembro Desde</p>
                     </div>
                 </div>
@@ -114,36 +114,26 @@
                     </div>
                     <div class="card-body">
                         <div class="top-words-list" id="topWordsList">
-                            <div class="top-word-item">
-                                <div class="word-rank">1</div>
-                                <div class="word-info">
-                                    <span class="word-name">Hola</span>
-                                    <div class="word-bar">
-                                        <div class="word-fill" data-width="100"></div>
+                            {% if stats.top_words %}
+                                {% set max_count = stats.top_words[0][1] %}
+                                {% for word, count in stats.top_words %}
+                                    <div class="top-word-item">
+                                        <div class="word-rank">{{ loop.index }}</div>
+                                        <div class="word-info">
+                                            <span class="word-name">{{ word }}</span>
+                                            <div class="word-bar">
+                                                {% set width = (count / max_count * 100) if max_count else 0 %}
+                                                <div class="word-fill" data-width="{{ width | round(0) }}"></div>
+                                            </div>
+                                        </div>
+                                        <div class="word-count">{{ count }}</div>
                                     </div>
+                                {% endfor %}
+                            {% else %}
+                                <div class="empty-state">
+                                    <p>Aún no hay datos suficientes.</p>
                                 </div>
-                                <div class="word-count">15</div>
-                            </div>
-                            <div class="top-word-item">
-                                <div class="word-rank">2</div>
-                                <div class="word-info">
-                                    <span class="word-name">Gracias</span>
-                                    <div class="word-bar">
-                                        <div class="word-fill" data-width="80"></div>
-                                    </div>
-                                </div>
-                                <div class="word-count">12</div>
-                            </div>
-                            <div class="top-word-item">
-                                <div class="word-rank">3</div>
-                                <div class="word-info">
-                                    <span class="word-name">Buenos Días</span>
-                                    <div class="word-bar">
-                                        <div class="word-fill" data-width="53"></div>
-                                    </div>
-                                </div>
-                                <div class="word-count">8</div>
-                            </div>
+                            {% endif %}
                         </div>
                     </div>
                 </div>
@@ -155,57 +145,32 @@
                     </div>
                     <div class="card-body">
                         <div class="activity-list" id="activityList">
-                            <div class="activity-item">
-                                <div class="activity-icon">
-                                    <i class="fas fa-hand-paper"></i>
-                                </div>
-                                <div class="activity-content">
-                                    <div class="activity-title">Hola</div>
-                                    <div class="activity-time">
-                                        <i class="fas fa-clock"></i>
-                                        23/10/2025 14:30
+                            {% if stats.recent_predictions %}
+                                {% for p in stats.recent_predictions %}
+                                    <div class="activity-item">
+                                        <div class="activity-icon">
+                                            <i class="fas fa-hand-paper"></i>
+                                        </div>
+                                        <div class="activity-content">
+                                            <div class="activity-title">{{ p.word }}</div>
+                                            <div class="activity-time">
+                                                <i class="fas fa-clock"></i>
+                                                {{ p.timestamp.strftime('%d/%m/%Y %H:%M') }}
+                                            </div>
+                                        </div>
+                                        <div class="activity-confidence">
+                                            {% set pct = p.confidence | round(0) %}
+                                            <div class="confidence-badge" data-confidence="{{ (pct / 100) }}">
+                                                {{ pct }}%
+                                            </div>
+                                        </div>
                                     </div>
+                                {% endfor %}
+                            {% else %}
+                                <div class="empty-state">
+                                    <p>No hay actividad reciente todavía.</p>
                                 </div>
-                                <div class="activity-confidence">
-                                    <div class="confidence-badge" data-confidence="0.92">
-                                        92%
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="activity-item">
-                                <div class="activity-icon">
-                                    <i class="fas fa-hand-paper"></i>
-                                </div>
-                                <div class="activity-content">
-                                    <div class="activity-title">Gracias</div>
-                                    <div class="activity-time">
-                                        <i class="fas fa-clock"></i>
-                                        23/10/2025 14:28
-                                    </div>
-                                </div>
-                                <div class="activity-confidence">
-                                    <div class="confidence-badge" data-confidence="0.87">
-                                        87%
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="activity-item">
-                                <div class="activity-icon">
-                                    <i class="fas fa-hand-paper"></i>
-                                </div>
-                                <div class="activity-content">
-                                    <div class="activity-title">Buenos Días</div>
-                                    <div class="activity-time">
-                                        <i class="fas fa-clock"></i>
-                                        23/10/2025 14:25
-                                    </div>
-                                </div>
-                                <div class="activity-confidence">
-                                    <div class="confidence-badge" data-confidence="0.81">
-                                        81%
-                                    </div>
-                                </div>
-                            </div>
+                            {% endif %}
                         </div>
                     </div>
                 </div>
@@ -221,20 +186,20 @@
                         <div class="info-grid">
                             <div class="info-item">
                                 <span class="info-label">Usuario:</span>
-                                <span class="info-value" id="userInfo">demo_user</span>
+                                <span class="info-value" id="userInfo">{{ user.username }}</span>
                             </div>
                             <div class="info-item">
                                 <span class="info-label">Email:</span>
-                                <span class="info-value" id="emailInfo">demo@lsch.com</span>
+                                <span class="info-value" id="emailInfo">{{ user.email }}</span>
                             </div>
                             <div class="info-item">
                                 <span class="info-label">Nombre Completo:</span>
-                                <span class="info-value" id="fullNameInfo">Usuario Demo</span>
+                                <span class="info-value" id="fullNameInfo">{{ user.full_name or '-' }}</span>
                             </div>
                             <div class="info-item">
                                 <span class="info-label">Última Sesión:</span>
                                 <span class="info-value" id="lastLoginInfo">
-                                    23/10/2025 14:15
+                                    {{ user.last_login.strftime('%d/%m/%Y %H:%M') if user.last_login else '—' }}
                                 </span>
                             </div>
                         </div>

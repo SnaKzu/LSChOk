@@ -42,9 +42,17 @@
                     </div>
 
                     <!-- Flash Messages -->
-                    <div id="flashMessages" style="display: none;">
-                        <!-- Flash messages will be shown via JavaScript -->
-                    </div>
+                    {% with messages = get_flashed_messages(with_categories=true) %}
+                        {% if messages %}
+                            {% for category, message in messages %}
+                                {% set cls = 'success' if category in ['success', 'info'] else 'error' %}
+                                <div class="alert alert-{{ cls }}">
+                                    <i class="fas {{ 'fa-check-circle' if cls == 'success' else 'fa-exclamation-circle' }}"></i>
+                                    <span>{{ message }}</span>
+                                </div>
+                            {% endfor %}
+                        {% endif %}
+                    {% endwith %}
 
                     <form method="POST" action="/register" class="auth-form" id="registerForm">
                         <div class="form-group">

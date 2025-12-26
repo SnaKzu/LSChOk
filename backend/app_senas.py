@@ -32,12 +32,44 @@ app = Flask(__name__,
             template_folder='../frontend')
 
 app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'senas-railway-key-2024')
-app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv('DATABASE_URL', 'sqlite:///lsp_users.db')
+
+
+def _normalize_database_url(url: str) -> str:
+    """Normaliza DATABASE_URL para SQLAlchemy.
+
+    Railway/Heroku a veces entregan `postgres://...` pero SQLAlchemy espera `postgresql://...`.
+    """
+    url = (url or "").strip()
+    if url.startswith("postgres://"):
+        return "postgresql://" + url[len("postgres://"):]
+    return url
+
+
+_db_url = _normalize_database_url(os.getenv('DATABASE_URL', ''))
+if _db_url:
+    app.config['SQLALCHEMY_DATABASE_URI'] = _db_url
+else:
+    # Fallback local
+    app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///lsp_users.db'
+
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+
+# Engine options seguros para producción (PostgreSQL)
+if app.config['SQLALCHEMY_DATABASE_URI'].startswith('postgresql://'):
+    engine_options = {
+        'pool_pre_ping': True,
+    }
+
+    # En Railway normalmente funciona con SSL; si la URL no trae sslmode, forzarlo.
+    if 'sslmode=' not in app.config['SQLALCHEMY_DATABASE_URI']:
+        engine_options['connect_args'] = {'sslmode': 'prefer'}
+
+    app.config['SQLALCHEMY_ENGINE_OPTIONS'] = engine_options
+
 CORS(app)
 
 # Importar modelos y configurar DB
-from models import db, User, Prediction, init_db
+from models import db, User, Prediction
 
 # Inicializar base de datos
 db.init_app(app)
@@ -757,6 +789,23 @@ def handle_process_frame(data):
                         session.last_prediction = prediction['word_id']
                         session.prediction_count += 1
 
+                        # Persistir predicción si el usuario está autenticado
+                        try:
+                            if current_user.is_authenticated:
+                                db_pred = Prediction(
+                                    user_id=int(current_user.id),
+                                    word=str(prediction['word']),
+                                    word_id=str(prediction.get('word_id') or ''),
+                                    confidence=float(prediction['confidence']),
+                                    session_id=str(session.session_id),
+                                    frame_count=int(FRAMES_POR_SECUENCIA),
+                                )
+                                db.session.add(db_pred)
+                                db.session.commit()
+                        except Exception as e:
+                            db.session.rollback()
+                            logger.warning(f"No se pudo guardar predicción en DB: {e}")
+
                         emit('prediction', {
                             'word': prediction['word'],
                             'word_id': prediction.get('word_id'),
@@ -806,7 +855,7 @@ def handle_clear_history():
             'message': 'Historial limpiado',
             'timestamp': datetime.now().isoformat()
         })
-        logger.info(f"🧹 Historial limpiado para: {session_id}")
+        logger.info(f"Historial limpiado para: {session_id}")
 
 @socketio.on('get_stats')
 def handle_get_stats():
