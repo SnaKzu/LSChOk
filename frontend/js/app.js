@@ -162,23 +162,6 @@ async function loadVocabulary() {
         // Clear skeleton loaders
         vocabularyGrid.innerHTML = '';
         
-        // Icon mapping for words
-        const iconMap = {
-            'hola': 'fa-hand-wave',
-            'adios': 'fa-hand-peace',
-            'gracias': 'fa-heart',
-            'por_favor': 'fa-hands-praying',
-            'buenos_dias': 'fa-sun',
-            'buenas_tardes': 'fa-cloud-sun',
-            'buenas_noches': 'fa-moon',
-            'bien': 'fa-thumbs-up',
-            'mal': 'fa-thumbs-down',
-            'mas_o_menos': 'fa-hand-point-right',
-            'como_estas': 'fa-hand-holding-heart',
-            'me_ayudas': 'fa-hands-helping',
-            'disculpa': 'fa-hand-holding',
-            'default': 'fa-hand-paper'
-        };
         
         // Normalize vocabulary to an entries array: [[labelId, humanLabel], ...]
         const vocabularyEntries = (() => {
@@ -195,13 +178,8 @@ async function loadVocabulary() {
         vocabularyEntries.forEach(([wordId, wordLabel]) => {
             const card = document.createElement('div');
             card.className = 'vocabulary-card';
-            
-            const iconClass = iconMap[wordId] || iconMap['default'];
-            
+
             card.innerHTML = `
-                <div class="vocabulary-icon">
-                    <i class="fas ${iconClass}"></i>
-                </div>
                 <div class="vocabulary-word">${wordLabel}</div>
                 <div class="vocabulary-id">${wordId.replace(/_/g, ' ')}</div>
             `;
