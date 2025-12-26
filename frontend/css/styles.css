@@ -597,24 +597,6 @@ section {
     box-shadow: var(--shadow-xl);
 }
 
-.vocabulary-icon {
-    width: 76px;
-    height: 76px;
-    border-radius: var(--radius-xl);
-    background: var(--gradient-primary);
-    box-shadow: var(--shadow-lg);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    position: relative;
-    z-index: 1;
-}
-
-.vocabulary-icon i {
-    font-size: 2rem;
-    color: var(--white);
-}
-
 .vocabulary-word {
     position: relative;
     z-index: 1;
