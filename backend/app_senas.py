@@ -687,6 +687,47 @@ def api_vocabulary():
         'timestamp': datetime.now().isoformat()
     })
 
+
+@app.route('/api/user/stats')
+def api_user_stats():
+    """Obtener estadísticas del usuario autenticado (para dashboard)."""
+    if not current_user.is_authenticated:
+        return jsonify({'error': 'unauthorized'}), 401
+
+    stats = current_user.get_stats() or {}
+
+    top_words = stats.get('top_words') or []
+    # Asegurar formato JSON estable: lista de [word, count]
+    top_words = [[str(w), int(c)] for (w, c) in top_words]
+
+    recent_predictions = stats.get('recent_predictions') or []
+    recent_predictions_json = []
+    for pred in recent_predictions:
+        try:
+            recent_predictions_json.append(pred.to_dict())
+        except Exception:
+            # Fallback defensivo
+            recent_predictions_json.append({
+                'word': getattr(pred, 'word', None),
+                'confidence': float(getattr(pred, 'confidence', 0.0) or 0.0),
+                'timestamp': getattr(pred, 'timestamp', None).isoformat() if getattr(pred, 'timestamp', None) else None,
+            })
+
+    response = {
+        'username': current_user.username,
+        'user': current_user.to_dict(),
+        'stats': {
+            'total_predictions': int(stats.get('total_predictions') or 0),
+            'avg_confidence': float(stats.get('avg_confidence') or 0.0),
+            'unique_words': int(stats.get('unique_words') or 0),
+            'top_words': top_words,
+            'recent_predictions': recent_predictions_json,
+        },
+        'timestamp': datetime.now().isoformat(),
+    }
+
+    return jsonify(response)
+
 # ==================== WEBSOCKET EVENTS ====================
 
 @socketio.on('connect')
